@@ -11,6 +11,11 @@ import { AppService } from './app.service';
 export class AppController {
   constructor(private readonly appService: AppService) {}
 
+  @Get()
+  hello() {
+    return 'Hello';
+  }
+
   @Get('meeting_access_token')
   getAccessToken(
     @Headers('x-auth-jwt') auth: string | undefined,
