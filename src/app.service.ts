@@ -10,10 +10,16 @@ import * as path from 'path';
 import { TokenPayload } from './types';
 import { ConfigService } from '@nestjs/config';
 import { DailyRoomInfo } from '@daily-co/daily-js';
+import { Cron, CronExpression } from '@nestjs/schedule';
 
 @Injectable()
 export class AppService {
-  constructor(private configService: ConfigService) {}
+  private _presence: Set<string>;
+
+  constructor(private configService: ConfigService) {
+    Logger.debug('Constructing the app service');
+    this._presence = new Set();
+  }
 
   private getAuthHeaders(): Headers {
     const apiKey = this.configService.get('DAILY_API_KEY');
@@ -178,5 +184,54 @@ export class AppService {
     const token = jwt.sign(payload, privateKey, { algorithm: 'ES256' });
 
     return token;
+  }
+
+  private getGlobalPresence(): Promise<unknown> {
+    return fetch(`https://api.daily.co/v1/presence`, {
+      method: 'GET',
+      headers: this.getAuthHeaders(),
+    })
+      .then((res) => {
+        if (!res.ok) {
+          res.text().then((err) => {
+            Logger.error('Error getting global presence: ', err);
+          });
+        }
+        return res;
+      })
+      .then((res) => res.json())
+      .catch((err) => {
+        Logger.error('Unable to obtain global presence data: ', err);
+      });
+  }
+
+  @Cron(CronExpression.EVERY_30_SECONDS)
+  handleCron() {
+    Logger.debug('Getting global presence data');
+
+    this.getGlobalPresence().then((data) => {
+      const occupiedRooms = new Set<string>([...Object.keys(data)]);
+
+      const finished = [...this._presence].reduce((finished, id) => {
+        if (!occupiedRooms.has(id)) {
+          finished.push(id);
+        }
+        return finished;
+      }, []);
+
+      const started = [...occupiedRooms].reduce((started, id) => {
+        if (!this._presence.has(id)) {
+          started.push(id);
+        }
+        return started;
+      }, []);
+
+      Logger.debug('Changed presence: ', {
+        started,
+        finished,
+      });
+
+      this._presence = new Set(occupiedRooms);
+    });
   }
 }

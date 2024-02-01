@@ -35,3 +35,8 @@ Solutions:
 2. on startup, the video bridge calls the global presence api. Any rooms with 0 participants, we delete the room and then tell OC the meeting is over
 
 Possibly we only ever poll the global presence api and it just does that continuously detecting when a meeting starts and ends.
+
+Daily docs suggest that calling the global presence api every 15 seconds is ok.
+
+_But_ there is a problem - it only returns data for rooms that have participants. That means that have to remember the state so that we can compare it to the last iteration in order to detect
+meetings that have ended.
