@@ -19,24 +19,8 @@ returned from this service.
 It is necessary to have a service to perform this function in order to protect the daily.co
 credentials and ensure that the OpenChat security model is in charge of controlling access.
 
-### Notes
+We need to also keep the OC backend up to date with which chats currently have active calls so that it can be integrated into the existing update loop.
 
-How do we keep our state up to date?
-
-When someone asks for a token for a room we tell OC that there is a meeting in progress for that room. We then start polling the room's presence api until there are zero participants and at that
-point we delete the room and tell OC that the meeting is over.
-
-Problem: what if the video-bridge crashes? OC will never be updated to say that the meeting is over.
-
-Solutions:
-
-1. on participant left on the OC client we could tell the OC backend that the meeting is over (we should also tell the bridge to delete the room in this case too). There is still a chance that won't get called e.g. I could be the last participant and I could simply close my browser.
-
-2. on startup, the video bridge calls the global presence api. Any rooms with 0 participants, we delete the room and then tell OC the meeting is over
-
-Possibly we only ever poll the global presence api and it just does that continuously detecting when a meeting starts and ends.
-
-Daily docs suggest that calling the global presence api every 15 seconds is ok.
-
-_But_ there is a problem - it only returns data for rooms that have participants. That means that have to remember the state so that we can compare it to the last iteration in order to detect
-meetings that have ended.
+The do this we call daily's global presence api which will tell us about all rooms that have active participants. By monitoring
+how this state changes over time we can derive when meetings start and end and call into the OC backend to update it. There is considerable latency on the
+daily.co presence endpoint and we would hope to replace this with webhooks as and when they become available (scheduled for Q1 2024).

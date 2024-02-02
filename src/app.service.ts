@@ -205,7 +205,7 @@ export class AppService {
       });
   }
 
-  @Cron(CronExpression.EVERY_30_SECONDS)
+  @Cron(CronExpression.EVERY_30_SECONDS, { disabled: true })
   handleCron() {
     Logger.debug('Getting global presence data');
 
