@@ -1,19 +1,31 @@
 export type TokenPayload = {
   userId: string;
   username: string;
-  chatId: string;
+  chatId: ChatIdentifier;
   exp: number;
 };
 
-// Do we actually need any of this or do we just need a Set<string> to record all of the rooms that have participants
+export type ChatIdentifier = MultiUserChatIdentifier | DirectChatIdentifier;
+export type MultiUserChatIdentifier = ChannelIdentifier | GroupChatIdentifier;
 
-export type RoomPresence = {
-  room: 'cbopz-duaaa-aaaaa-qaaka-cai';
-  id: '9035da22-a257-45fb-be23-1ed2c5d36d71';
-  userId: 'dfdal-2uaaa-aaaaa-qaama-cai';
-  userName: 'julian_jelfs';
-  joinTime: '2024-02-01T16:57:07.000Z';
-  duration: 53;
+export type DirectChatIdentifier = {
+  kind: 'direct_chat';
+  userId: string;
 };
 
-export type PresenceData = Record<string, RoomPresence>;
+export type GroupChatIdentifier = {
+  kind: 'group_chat';
+  groupId: string;
+};
+
+export type ChannelIdentifier = {
+  kind: 'channel';
+  communityId: string;
+  channelId: string;
+};
+
+export class AccessTokenRequest {
+  userId: string;
+  username: string;
+  chatId: ChatIdentifier;
+}

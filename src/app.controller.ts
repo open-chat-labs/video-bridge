@@ -1,11 +1,13 @@
 import {
+  Body,
   Controller,
   Get,
   Headers,
-  Param,
+  Post,
   UnauthorizedException,
 } from '@nestjs/common';
 import { AppService } from './app.service';
+import { AccessTokenRequest } from './types';
 
 @Controller('room')
 export class AppController {
@@ -26,12 +28,12 @@ export class AppController {
   /**
    * This is the bit that should be moved to the OC backend once this is all working
    */
-  @Get('access_jwt/:userId/:username/:chatId')
-  getAccessJwt(
-    @Param('userId') userId: string,
-    @Param('username') username: string,
-    @Param('chatId') chatId: string,
-  ): string {
-    return this.appService.getAccessJwt(userId, username, chatId);
+  @Post('access_jwt')
+  getAccessJwt(@Body() request: AccessTokenRequest): string {
+    return this.appService.getAccessJwt(
+      request.userId,
+      request.username,
+      request.chatId,
+    );
   }
 }
