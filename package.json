@@ -21,6 +21,7 @@
   },
   "dependencies": {
     "@daily-co/daily-js": "^0.57.2",
+    "@dfinity/principal": "^0.21.4",
     "@nestjs/axios": "^3.0.2",
     "@nestjs/common": "^10.0.0",
     "@nestjs/config": "^3.1.1",
@@ -29,6 +30,7 @@
     "@nestjs/schedule": "^4.0.0",
     "@types/jsonwebtoken": "^9.0.5",
     "axios": "^1.6.7",
+    "bigint-buffer": "^1.1.5",
     "jsonwebtoken": "^9.0.2",
     "reflect-metadata": "^0.1.13",
     "rxjs": "^7.8.1"

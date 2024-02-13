@@ -7,11 +7,12 @@ import {
 import * as jwt from 'jsonwebtoken';
 import * as fs from 'fs';
 import * as path from 'path';
-import { ChatIdentifier, TokenPayload } from './types';
+import { AccessTokenResponse, ChatIdentifier, TokenPayload } from './types';
 import { ConfigService } from '@nestjs/config';
 import { DailyRoomInfo } from '@daily-co/daily-js';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { OpenChatService } from './openchat.service';
+import { chatIdToRoomName, roomNameToChatIds } from './utils';
 
 @Injectable()
 export class AppService {
@@ -173,46 +174,23 @@ export class AppService {
     }
   }
 
-  private chatIdToRoomId(chatId: ChatIdentifier): string {
-    switch (chatId.kind) {
-      case 'channel':
-        return `channel_${chatId.communityId}_${chatId.channelId}`;
-      case 'direct_chat':
-        return `direct_${chatId.userId}`;
-      case 'group_chat':
-        return `group_${chatId.groupId}`;
-    }
+  // Convert a byte array to a hex string
+  private bytesToHexString(bytes: Uint8Array): string {
+    return bytes.reduce(
+      (str, byte) => str + byte.toString(16).padStart(2, '0'),
+      '',
+    );
   }
 
-  private roomIdToChatId(roomId: string): ChatIdentifier | undefined {
-    const channelRegex = /^channel_([^_]+)_([^_]+)$/;
-    const directRegex = /^direct_(.+)$/;
-    const groupRegex = /^group_(.+)$/;
-
-    let match: RegExpMatchArray | null;
-
-    if ((match = roomId.match(channelRegex)) !== null) {
-      return {
-        kind: 'channel',
-        communityId: match[1],
-        channelId: match[2],
-      };
-    } else if ((match = roomId.match(directRegex)) !== null) {
-      return {
-        kind: 'direct_chat',
-        userId: match[1],
-      };
-    } else if ((match = roomId.match(groupRegex)) !== null) {
-      return {
-        kind: 'group_chat',
-        groupId: match[1],
-      };
-    } else {
-      return undefined;
-    }
+  private chatIdToRoomName(userId: string, chatId: ChatIdentifier): string {
+    return chatIdToRoomName(userId, chatId);
   }
 
-  async getAccessToken(authToken: string): Promise<string> {
+  private roomNameToChatIds(roomId: string): ChatIdentifier[] {
+    return roomNameToChatIds(roomId);
+  }
+
+  async getAccessToken(authToken: string): Promise<AccessTokenResponse> {
     try {
       Logger.debug('AuthToken: ', authToken);
       const publicKeyPath = path.join(process.cwd(), './public_key.pem');
@@ -226,30 +204,33 @@ export class AppService {
       }
       Logger.debug('Auth token has been decoded: ', decoded);
 
-      const roomId = this.chatIdToRoomId(decoded.chatId);
+      const roomName = this.chatIdToRoomName(decoded.userId, decoded.chatId);
 
-      const exists = await this.roomExists(roomId);
+      const exists = await this.roomExists(roomName);
       if (!exists) {
-        Logger.debug('There is no existing room for chatId: ', roomId);
+        Logger.debug('There is no existing room for chatId: ', roomName);
         Logger.debug("Let's try to create one");
-        const room = await this.createRoom(roomId);
+        const room = await this.createRoom(roomName);
         Logger.debug('We created the room: ', room);
       } else {
         Logger.debug('Room already exists - no need to create it');
       }
 
-      await this.sendStartMessageToOpenChat(roomId, decoded.chatId);
+      await this.sendStartMessageToOpenChat(roomName, decoded.chatId);
 
       Logger.debug('About to get the meeting token');
       const token = await this.getMeetingToken(
-        roomId,
+        roomName,
         decoded.userId,
         decoded.username,
       );
 
       Logger.debug('Returning meeting token to the UI: ', token);
 
-      return token;
+      return {
+        token,
+        roomName,
+      };
     } catch (err) {
       throw new UnauthorizedException('Error obtaining room access token', err);
     }
@@ -308,13 +289,7 @@ export class AppService {
       }, []);
 
       this.openChat.meetingsFinished(
-        finished.reduce((chatIds, f) => {
-          const chatId = this.roomIdToChatId(f);
-          if (chatId !== undefined) {
-            chatIds.push(chatId);
-          }
-          return chatIds;
-        }, []),
+        finished.flatMap((f) => this.roomNameToChatIds(f)),
       );
 
       this._presence = new Set(occupiedRooms);

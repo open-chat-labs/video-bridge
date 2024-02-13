@@ -7,7 +7,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { AppService } from './app.service';
-import { AccessTokenRequest } from './types';
+import { AccessTokenRequest, AccessTokenResponse } from './types';
 
 @Controller('room')
 export class AppController {
@@ -16,7 +16,7 @@ export class AppController {
   @Get('meeting_access_token')
   getAccessToken(
     @Headers('x-auth-jwt') auth: string | undefined,
-  ): Promise<string> {
+  ): Promise<AccessTokenResponse> {
     if (auth === undefined) {
       throw new UnauthorizedException(
         'You must provide an OpenChat authorisation jwt to show that you are permitted to access the room',

@@ -5,6 +5,11 @@ export type TokenPayload = {
   exp: number;
 };
 
+export type AccessTokenResponse = {
+  token: string;
+  roomName: string;
+};
+
 export type ChatIdentifier = MultiUserChatIdentifier | DirectChatIdentifier;
 export type MultiUserChatIdentifier = ChannelIdentifier | GroupChatIdentifier;
 
