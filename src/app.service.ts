@@ -174,14 +174,6 @@ export class AppService {
     }
   }
 
-  // Convert a byte array to a hex string
-  private bytesToHexString(bytes: Uint8Array): string {
-    return bytes.reduce(
-      (str, byte) => str + byte.toString(16).padStart(2, '0'),
-      '',
-    );
-  }
-
   private chatIdToRoomName(userId: string, chatId: ChatIdentifier): string {
     return chatIdToRoomName(userId, chatId);
   }
