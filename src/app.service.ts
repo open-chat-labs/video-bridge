@@ -7,23 +7,29 @@ import {
 import * as jwt from 'jsonwebtoken';
 import * as fs from 'fs';
 import * as path from 'path';
-import { AccessTokenResponse, ChatIdentifier, TokenPayload } from './types';
+import {
+  AccessTokenResponse,
+  ChatIdentifier,
+  Meeting,
+  TokenPayload,
+} from './types';
 import { ConfigService } from '@nestjs/config';
 import { DailyRoomInfo } from '@daily-co/daily-js';
 import { Cron, CronExpression } from '@nestjs/schedule';
-import { OpenChatService } from './openchat.service';
+import { OpenChatService } from './openchat/openchat.service';
 import { chatIdToRoomName, roomNameToChatIds } from './utils';
 
 @Injectable()
 export class AppService {
-  private _presence: Set<string>;
+  // TODO - this will need to be persisted eventually
+  private _presence: Map<string, bigint>;
 
   constructor(
     private configService: ConfigService,
     private openChat: OpenChatService,
   ) {
     Logger.debug('Constructing the app service');
-    this._presence = new Set();
+    this._presence = new Map();
   }
 
   private getAuthHeaders(): Headers {
@@ -165,12 +171,13 @@ export class AppService {
 
   private async sendStartMessageToOpenChat(
     roomId: string,
+    userId: string,
     chatId: ChatIdentifier,
-  ): Promise<void> {
+  ): Promise<bigint | undefined> {
     Logger.debug('Checking the participants for roomId', roomId);
     const participantsCount = await this.getRoomParticipantsCount(roomId);
     if (participantsCount === 0) {
-      this.openChat.sendVideoCallStartedMessage(chatId);
+      return this.openChat.sendVideoCallStartedMessage(userId, chatId);
     }
   }
 
@@ -182,18 +189,22 @@ export class AppService {
     return roomNameToChatIds(roomId);
   }
 
+  private decodeJwt(token: string): TokenPayload {
+    const publicKeyPath = path.join(process.cwd(), './public_key.pem');
+    const publicKey = fs.readFileSync(publicKeyPath, 'utf8');
+    const decoded = jwt.verify(token, publicKey, {
+      algorithms: ['ES256'],
+    }) as TokenPayload;
+
+    if (Date.now() > decoded.exp) {
+      throw new UnauthorizedException('The supplied jwt token has expired');
+    }
+    return decoded;
+  }
+
   async getAccessToken(authToken: string): Promise<AccessTokenResponse> {
     try {
-      Logger.debug('AuthToken: ', authToken);
-      const publicKeyPath = path.join(process.cwd(), './public_key.pem');
-      const publicKey = fs.readFileSync(publicKeyPath, 'utf8');
-      const decoded = jwt.verify(authToken, publicKey, {
-        algorithms: ['ES256'],
-      }) as TokenPayload;
-
-      if (Date.now() > decoded.exp) {
-        throw new UnauthorizedException('The supplied jwt token has expired');
-      }
+      const decoded = this.decodeJwt(authToken);
       Logger.debug('Auth token has been decoded: ', decoded);
 
       const roomName = this.chatIdToRoomName(decoded.userId, decoded.chatId);
@@ -208,7 +219,17 @@ export class AppService {
         Logger.debug('Room already exists - no need to create it');
       }
 
-      await this.sendStartMessageToOpenChat(roomName, decoded.chatId);
+      const messageId = await this.sendStartMessageToOpenChat(
+        roomName,
+        decoded.userId,
+        decoded.chatId,
+      );
+      if (messageId) {
+        // if we got back a message Id it means we are starting a new meeting and we should track it in the presence db
+        // TODO - should we check if there is already a messageId in there?
+        this._presence.set(roomName, messageId);
+      }
+      Logger.debug('Meeting start messageId ', messageId);
 
       Logger.debug('About to get the meeting token');
       const token = await this.getMeetingToken(
@@ -273,18 +294,22 @@ export class AppService {
     this.getGlobalPresence().then((data) => {
       const occupiedRooms = new Set<string>([...Object.keys(data)]);
 
-      const finished = [...this._presence].reduce((finished, id) => {
-        if (!occupiedRooms.has(id)) {
-          finished.push(id);
-        }
-        return finished;
-      }, []);
+      const currentRooms = [...this._presence];
 
-      this.openChat.meetingsFinished(
-        finished.flatMap((f) => this.roomNameToChatIds(f)),
+      const finishedMeetings = currentRooms.reduce(
+        (finished, [roomName, messageId]) => {
+          if (!occupiedRooms.has(roomName)) {
+            const chatIds = this.roomNameToChatIds(roomName);
+            chatIds.forEach((chatId) => finished.push({ chatId, messageId }));
+          }
+          return finished;
+        },
+        [] as Meeting[],
       );
 
-      this._presence = new Set(occupiedRooms);
+      const result = this.openChat.meetingsFinished(finishedMeetings);
+
+      // this._presence = new Set(occupiedRooms);
     });
   }
 }

@@ -6,6 +6,7 @@
   "private": true,
   "license": "UNLICENSED",
   "scripts": {
+    "codegen": "sh ./codegen.sh",
     "build": "nest build",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "nest start",
@@ -21,7 +22,11 @@
   },
   "dependencies": {
     "@daily-co/daily-js": "^0.57.2",
-    "@dfinity/principal": "^0.21.4",
+    "@dfinity/agent": "^0.20.2",
+    "@dfinity/candid": "^0.20.2",
+    "@dfinity/identity": "^0.20.2",
+    "@dfinity/identity-secp256k1": "^1.0.0",
+    "@dfinity/principal": "^0.20.2",
     "@nestjs/axios": "^3.0.2",
     "@nestjs/common": "^10.0.0",
     "@nestjs/config": "^3.1.1",
@@ -32,8 +37,10 @@
     "axios": "^1.6.7",
     "bigint-buffer": "^1.1.5",
     "jsonwebtoken": "^9.0.2",
+    "pem-file": "^1.0.1",
     "reflect-metadata": "^0.1.13",
-    "rxjs": "^7.8.1"
+    "rxjs": "^7.8.1",
+    "uuid": "^9.0.1"
   },
   "devDependencies": {
     "@nestjs/cli": "^10.0.0",

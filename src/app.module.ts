@@ -3,7 +3,7 @@ import { ConfigModule } from '@nestjs/config';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { ScheduleModule } from '@nestjs/schedule';
-import { OpenChatService } from './openchat.service';
+import { OpenChatService } from './openchat/openchat.service';
 import { HttpModule } from '@nestjs/axios';
 
 @Module({
