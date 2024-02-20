@@ -4,6 +4,7 @@ import { UserService, idlFactory } from './candid/idl';
 import { Principal } from '@dfinity/principal';
 import { generateUint64, newMessageId } from '../../utils';
 import { Identity } from '@dfinity/agent';
+import { DirectMeeting } from '../../types';
 
 export class UserClient extends CandidService {
   private userService: UserService;
@@ -49,23 +50,17 @@ export class UserClient extends CandidService {
     );
   }
 
-  meetingFinished(messageId: bigint): Promise<boolean> {
-    Logger.debug(
-      'Sending meeting finished for userId ',
-      this.userId,
-      messageId,
-    );
+  meetingFinished(meeting: DirectMeeting): Promise<DirectMeeting> {
+    Logger.debug('Sending meeting finished for userId ', this.userId, meeting);
     return this.handleResponse(
       this.userService.end_video_call({
-        // TODO this should be messageId
-        // message_id: messageId,
         user_id: Principal.fromText(this.userId),
-        message_index: Number(messageId),
+        message_id: meeting.messageId,
       }),
       () => {
         // if we get *any* response here we consider it success
         // only an exception is a problem
-        return true;
+        return meeting;
       },
     );
   }

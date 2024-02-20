@@ -12,6 +12,7 @@ import {
   ChatIdentifier,
   Meeting,
   TokenPayload,
+  createMeeting,
 } from './types';
 import { ConfigService } from '@nestjs/config';
 import { DailyRoomInfo } from '@daily-co/daily-js';
@@ -287,7 +288,11 @@ export class AppService {
       });
   }
 
-  @Cron(CronExpression.EVERY_30_SECONDS, { disabled: true })
+  getMeetings() {
+    return this._presence;
+  }
+
+  @Cron(CronExpression.EVERY_30_SECONDS, { disabled: false })
   handleCron() {
     Logger.debug('Getting global presence data');
 
@@ -300,16 +305,27 @@ export class AppService {
         (finished, [roomName, messageId]) => {
           if (!occupiedRooms.has(roomName)) {
             const chatIds = this.roomNameToChatIds(roomName);
-            chatIds.forEach((chatId) => finished.push({ chatId, messageId }));
+            chatIds.forEach((chatId) =>
+              finished.push(createMeeting(chatId, roomName, messageId)),
+            );
           }
           return finished;
         },
         [] as Meeting[],
       );
 
-      const result = this.openChat.meetingsFinished(finishedMeetings);
+      this.openChat.meetingsFinished(finishedMeetings).then((finished) => {
+        Logger.debug('Successfully finished: ', finished);
+        // all the meetings that we successfully marked finished need to be removed from the db
+        finished.forEach((meeting) => {
+          this._presence.delete(meeting.roomName);
+        });
 
-      // this._presence = new Set(occupiedRooms);
+        Logger.debug(
+          'After ending meetings, video bridge presence state: ',
+          this._presence,
+        );
+      });
     });
   }
 }

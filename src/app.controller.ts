@@ -13,6 +13,15 @@ import { AccessTokenRequest, AccessTokenResponse } from './types';
 export class AppController {
   constructor(private readonly appService: AppService) {}
 
+  /**
+   * This returns the internal state of the video bridge and indicates which meetings it currently
+   * thinks are in progress
+   */
+  @Get('meetings')
+  getMeetings() {
+    return this.appService.getMeetings();
+  }
+
   @Get('meeting_access_token')
   getAccessToken(
     @Headers('x-auth-jwt') auth: string | undefined,

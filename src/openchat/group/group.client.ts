@@ -4,6 +4,7 @@ import { GroupService, idlFactory } from './candid/idl';
 import { Principal } from '@dfinity/principal';
 import { generateUint64, newMessageId } from '../../utils';
 import { Identity } from '@dfinity/agent';
+import { GroupMeeting } from '../../types';
 
 export class GroupClient extends CandidService {
   private groupService: GroupService;
@@ -52,18 +53,16 @@ export class GroupClient extends CandidService {
     );
   }
 
-  meetingFinished(messageId: bigint): Promise<boolean> {
-    Logger.debug('Sending meeting finished on group ', this.groupId, messageId);
+  meetingFinished(meeting: GroupMeeting): Promise<GroupMeeting> {
+    Logger.debug('Sending meeting finished on group ', this.groupId, meeting);
     return this.handleResponse(
       this.groupService.end_video_call({
-        // TODO this should be messageId
-        // message_id: messageId,
-        message_index: Number(messageId),
+        message_id: meeting.messageId,
       }),
       () => {
         // if we get *any* response here we consider it success
         // only an exception is a problem
-        return true;
+        return meeting;
       },
     );
   }

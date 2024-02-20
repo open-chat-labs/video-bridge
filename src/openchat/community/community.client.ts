@@ -4,6 +4,7 @@ import { CommunityService, idlFactory } from './candid/idl';
 import { Principal } from '@dfinity/principal';
 import { newMessageId } from '../../utils';
 import { Identity } from '@dfinity/agent';
+import { ChannelMeeting } from '../../types';
 
 export class CommunityClient extends CandidService {
   private communityService: CommunityService;
@@ -56,24 +57,21 @@ export class CommunityClient extends CandidService {
     );
   }
 
-  meetingFinished(channelId: string, messageId: bigint): Promise<boolean> {
+  meetingFinished(meeting: ChannelMeeting): Promise<ChannelMeeting> {
     Logger.debug(
       'Sending meeting finished on community ',
       this.communityId,
-      channelId,
-      messageId,
+      meeting,
     );
     return this.handleResponse(
       this.communityService.end_video_call({
-        // TODO this should be messageId
-        // message_id: messageId,
-        channel_id: BigInt(channelId),
-        message_index: Number(messageId),
+        channel_id: BigInt(meeting.chatId.channelId),
+        message_id: meeting.messageId,
       }),
       () => {
         // if we get *any* response here we consider it success
         // only an exception is a problem
-        return true;
+        return meeting;
       },
     );
   }

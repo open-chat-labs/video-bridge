@@ -3,7 +3,6 @@ import { ConfigService } from '@nestjs/config';
 import { ChatIdentifier, Meeting } from '../types';
 import { waitAll } from '../utils';
 import { GroupClient } from './group/group.client';
-import * as pemfile from 'pem-file';
 import { Secp256k1KeyIdentity } from '@dfinity/identity-secp256k1';
 import { Identity } from '@dfinity/agent';
 import { UserClient } from './user/user.client';
@@ -43,30 +42,32 @@ export class OpenChatService {
     }
   }
 
-  async meetingsFinished(meetings: Meeting[]): Promise<void> {
+  async meetingsFinished(meetings: Meeting[]): Promise<Meeting[]> {
     Logger.debug('Sending meeting finished messages to OpenChat: ', meetings);
 
-    const results = await waitAll(
+    const results = await waitAll<Meeting>(
       meetings.map((meeting) => {
-        if (meeting.chatId.kind === 'channel') {
-          const client = this.getCommunityClient(meeting.chatId.communityId);
-          return client.meetingFinished(
-            meeting.chatId.channelId,
-            meeting.messageId,
+        if (meeting.kind === 'channel_meeting') {
+          return this.getCommunityClient(
+            meeting.chatId.communityId,
+          ).meetingFinished(meeting);
+        } else if (meeting.kind === 'direct_meeting') {
+          return this.getUserClient(meeting.chatId.userId).meetingFinished(
+            meeting,
           );
-        } else if (meeting.chatId.kind === 'direct_chat') {
-          const client = this.getUserClient(meeting.chatId.userId);
-          return client.meetingFinished(meeting.messageId);
-        } else if (meeting.chatId.kind === 'group_chat') {
-          const client = this.getGroupClient(meeting.chatId.groupId);
-          return client.meetingFinished(meeting.messageId);
+        } else if (meeting.kind === 'group_meeting') {
+          return this.getGroupClient(meeting.chatId.groupId).meetingFinished(
+            meeting,
+          );
         }
       }),
     );
 
-    Logger.debug('Meeting finished results: ', results);
-
-    return Promise.resolve();
+    Logger.debug('Meetings successfully finished: ', results.success);
+    if (results.errors.length > 0) {
+      Logger.error('Unable to finish all meetings: ', results.errors);
+    }
+    return results.success;
   }
 
   private getUserClient(userId: string): UserClient {
@@ -94,11 +95,10 @@ export class OpenChatService {
   }
 
   private createIdentity() {
-    const rawKey = this.configService.get('OC_IDENTITY');
-    const privateKey = rawKey.replace(/\\n/g, '\n');
-    Logger.debug('Key via env: ', privateKey, rawKey);
+    const privateKey = this.configService.get('OC_IDENTITY');
+    Logger.debug('Key via env: ', privateKey);
     try {
-      const buf: Buffer = pemfile.decode(privateKey);
+      const buf = Buffer.from(privateKey, 'base64');
       if (buf.length != 118) {
         throw 'expecting byte length 118 but got ' + buf.length;
       }
