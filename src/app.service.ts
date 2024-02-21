@@ -9,10 +9,12 @@ import * as fs from 'fs';
 import * as path from 'path';
 import {
   AccessTokenResponse,
+  ApiTokenPayload,
   ChatIdentifier,
   Meeting,
   TokenPayload,
   createMeeting,
+  mapTokenPayload,
 } from './types';
 import { ConfigService } from '@nestjs/config';
 import { DailyRoomInfo } from '@daily-co/daily-js';
@@ -20,10 +22,15 @@ import { Cron, CronExpression } from '@nestjs/schedule';
 import { OpenChatService } from './openchat/openchat.service';
 import { chatIdToRoomName, roomNameToChatIds } from './utils';
 
+type InProgress = {
+  messageId: bigint;
+  confirmed: boolean;
+};
+
 @Injectable()
 export class AppService {
   // TODO - this will need to be persisted eventually
-  private _presence: Map<string, bigint>;
+  private _presence: Map<string, InProgress>;
 
   constructor(
     private configService: ConfigService,
@@ -196,9 +203,11 @@ export class AppService {
     Logger.debug('Encoded: ', token, publicKey);
     let decoded: TokenPayload | undefined = undefined;
     try {
-      decoded = jwt.verify(token, publicKey, {
-        algorithms: ['ES256'],
-      }) as TokenPayload;
+      decoded = mapTokenPayload(
+        jwt.verify(token, publicKey, {
+          algorithms: ['ES256'],
+        }) as ApiTokenPayload,
+      ) as TokenPayload;
       Logger.debug('Decoded: ', decoded);
     } catch (err) {
       Logger.error('Error verifying access token: ', err);
@@ -206,14 +215,13 @@ export class AppService {
         `Unable to verify supplied access token: ${err}`,
       );
     }
-
-    if (Date.now() > decoded.exp) {
-      throw new UnauthorizedException('The supplied jwt token has expired');
-    }
     return decoded;
   }
 
-  async getAccessToken(authToken: string): Promise<AccessTokenResponse> {
+  async getAccessToken(
+    username: string,
+    authToken: string,
+  ): Promise<AccessTokenResponse> {
     try {
       const decoded = this.decodeJwt(authToken);
       Logger.debug('Auth token has been decoded: ', decoded);
@@ -236,9 +244,11 @@ export class AppService {
         decoded.chatId,
       );
       if (messageId) {
-        // if we got back a message Id it means we are starting a new meeting and we should track it in the presence db
-        // TODO - should we check if there is already a messageId in there?
-        this._presence.set(roomName, messageId);
+        // capture that we are tentatively starting a meeting with the associated meeting id
+        this._presence.set(roomName, {
+          messageId,
+          confirmed: false,
+        });
       }
       Logger.debug('Meeting start messageId ', messageId);
 
@@ -246,7 +256,7 @@ export class AppService {
       const token = await this.getMeetingToken(
         roomName,
         decoded.userId,
-        decoded.username,
+        username,
       );
 
       Logger.debug('Returning meeting token to the UI: ', token);
@@ -285,38 +295,58 @@ export class AppService {
 
   @Cron(CronExpression.EVERY_30_SECONDS, { disabled: false })
   handleCron() {
-    Logger.debug('Getting global presence data');
+    try {
+      Logger.debug('Getting global presence data');
 
-    this.getGlobalPresence().then((data) => {
-      const occupiedRooms = new Set<string>([...Object.keys(data)]);
+      this.getGlobalPresence().then((data) => {
+        const occupiedRoomsNames = new Set<string>([...Object.keys(data)]);
 
-      const currentRooms = [...this._presence];
+        Logger.debug('Occupied room names: ', [...occupiedRoomsNames]);
 
-      const finishedMeetings = currentRooms.reduce(
-        (finished, [roomName, messageId]) => {
-          if (!occupiedRooms.has(roomName)) {
-            const chatIds = this.roomNameToChatIds(roomName);
-            chatIds.forEach((chatId) =>
-              finished.push(createMeeting(chatId, roomName, messageId)),
-            );
+        [...this._presence].forEach(([roomName, { confirmed }]) => {
+          if (occupiedRoomsNames.has(roomName) && !confirmed) {
+            const inProgress = this._presence.get(roomName);
+            if (inProgress) {
+              this._presence.set(roomName, { ...inProgress, confirmed: true });
+            } else {
+              Logger.warn(
+                "A room name has come back from the presence api that we don't have a record of: ",
+                roomName,
+              );
+            }
           }
-          return finished;
-        },
-        [] as Meeting[],
-      );
-
-      this.openChat.meetingsFinished(finishedMeetings).then((finished) => {
-        Logger.debug('Successfully finished: ', finished);
-        // all the meetings that we successfully marked finished need to be removed from the db
-        finished.forEach((meeting) => {
-          this._presence.delete(meeting.roomName);
         });
 
-        Logger.debug(
-          'After ending meetings, video bridge presence state: ',
-          this._presence,
+        const finishedMeetings = [...this._presence].reduce(
+          (finished, [roomName, { confirmed, messageId }]) => {
+            if (!occupiedRoomsNames.has(roomName) && confirmed) {
+              const chatIds = this.roomNameToChatIds(roomName);
+              chatIds.forEach((chatId) =>
+                finished.push(createMeeting(chatId, roomName, messageId)),
+              );
+            }
+            return finished;
+          },
+          [] as Meeting[],
         );
+
+        if (finishedMeetings.length > 0) {
+          this.openChat.meetingsFinished(finishedMeetings).then((finished) => {
+            Logger.debug('Successfully finished: ', finished);
+            // all the meetings that we successfully marked finished need to be removed from the db
+            finished.forEach((meeting) => {
+              this._presence.delete(meeting.roomName);
+            });
+
+            Logger.debug(
+              'After ending meetings, video bridge presence state: ',
+              this._presence,
+            );
+          });
+        }
       });
-    });
+    } catch (err) {
+      Logger.error('There was an error in the recuring presence job', err);
+    }
   }
 }
