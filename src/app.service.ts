@@ -191,11 +191,21 @@ export class AppService {
   }
 
   private decodeJwt(token: string): TokenPayload {
-    const publicKeyPath = path.join(process.cwd(), './public_key.pem');
+    const publicKeyPath = path.join(process.cwd(), './oc-public.pem');
     const publicKey = fs.readFileSync(publicKeyPath, 'utf8');
-    const decoded = jwt.verify(token, publicKey, {
-      algorithms: ['ES256'],
-    }) as TokenPayload;
+    Logger.debug('Encoded: ', token, publicKey);
+    let decoded: TokenPayload | undefined = undefined;
+    try {
+      decoded = jwt.verify(token, publicKey, {
+        algorithms: ['ES256'],
+      }) as TokenPayload;
+      Logger.debug('Decoded: ', decoded);
+    } catch (err) {
+      Logger.error('Error verifying access token: ', err);
+      throw new UnauthorizedException(
+        `Unable to verify supplied access token: ${err}`,
+      );
+    }
 
     if (Date.now() > decoded.exp) {
       throw new UnauthorizedException('The supplied jwt token has expired');
@@ -248,25 +258,6 @@ export class AppService {
     } catch (err) {
       throw new UnauthorizedException('Error obtaining room access token', err);
     }
-  }
-
-  /**
-   * This is the bit that should be moved to the OC backend once this is all working
-   */
-  getAccessJwt(
-    userId: string,
-    username: string,
-    chatId: ChatIdentifier,
-  ): string {
-    const privateKeyPath = path.join(process.cwd(), './private_key.pem');
-    const privateKey = fs.readFileSync(privateKeyPath, 'utf8');
-    const payload: TokenPayload = {
-      username,
-      userId,
-      chatId,
-      exp: Date.now() + 1000 * 60 * 5, // expires in 5 minutes
-    };
-    return jwt.sign(payload, privateKey, { algorithm: 'ES256' });
   }
 
   private getGlobalPresence(): Promise<unknown> {
