@@ -5,8 +5,6 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import * as jwt from 'jsonwebtoken';
-import * as fs from 'fs';
-import * as path from 'path';
 import {
   AccessTokenResponse,
   ApiTokenPayload,
@@ -198,8 +196,7 @@ export class AppService {
   }
 
   private decodeJwt(token: string): TokenPayload {
-    const publicKeyPath = path.join(process.cwd(), './oc-public.pem');
-    const publicKey = fs.readFileSync(publicKeyPath, 'utf8');
+    const publicKey = this.configService.get('OC_PUBLIC');
     Logger.debug('Encoded: ', token, publicKey);
     let decoded: TokenPayload | undefined = undefined;
     try {
