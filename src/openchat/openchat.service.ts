@@ -74,7 +74,7 @@ export class OpenChatService {
     return new UserClient(
       this._identity as unknown as Identity,
       userId,
-      this.configService.get('IC_URL') ?? 'http://localhost:5001',
+      this.configService.get('IC_URL'),
     );
   }
 
@@ -82,7 +82,7 @@ export class OpenChatService {
     return new GroupClient(
       this._identity as unknown as Identity,
       groupId,
-      this.configService.get('IC_URL') ?? 'http://localhost:5001',
+      this.configService.get('IC_URL'),
     );
   }
 
@@ -90,7 +90,7 @@ export class OpenChatService {
     return new CommunityClient(
       this._identity as unknown as Identity,
       communityId,
-      this.configService.get('IC_URL') ?? 'http://localhost:5001',
+      this.configService.get('IC_URL'),
     );
   }
 

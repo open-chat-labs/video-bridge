@@ -19,23 +19,26 @@ import { DailyRoomInfo } from '@daily-co/daily-js';
 import { Interval } from '@nestjs/schedule';
 import { OpenChatService } from './openchat/openchat.service';
 import { chatIdToRoomName, roomNameToChatIds } from './utils';
-
-type InProgress = {
-  messageId: bigint;
-  confirmed: boolean;
-};
+import { InProgressService } from './inprogress/inprogress.service';
+import { InProgress } from './inprogress/inprogress.schema';
 
 @Injectable()
 export class AppService {
-  // TODO - this will need to be persisted eventually
-  private _presence: Map<string, InProgress>;
-
   constructor(
+    private inprogressService: InProgressService,
     private configService: ConfigService,
     private openChat: OpenChatService,
   ) {
     Logger.debug('Constructing the app service');
-    this._presence = new Map();
+
+    inprogressService
+      .findAll()
+      .then((all) => {
+        Logger.debug('Presence: ', all);
+      })
+      .catch((err) => {
+        Logger.error('Error loading docs: ', err);
+      });
   }
 
   private getAuthHeaders(): Headers {
@@ -243,8 +246,10 @@ export class AppService {
       );
       if (messageId) {
         // capture that we are tentatively starting a meeting with the associated meeting id
-        this._presence.set(roomName, {
-          messageId,
+
+        this.inprogressService.upsert({
+          roomName,
+          messageId: messageId.toString(),
           confirmed: false,
         });
       }
@@ -289,65 +294,76 @@ export class AppService {
   }
 
   getMeetings() {
-    return this._presence;
+    return this.inprogressService.findAll();
+  }
+
+  private toInProgressMap(inprog: InProgress[]): Map<string, InProgress> {
+    return inprog.reduce((m, i) => {
+      m.set(i.roomName, i);
+      return m;
+    }, new Map<string, InProgress>());
   }
 
   @Interval(15000)
-  checkGlobalPresence() {
+  async checkGlobalPresence() {
     try {
       Logger.debug('Getting global presence data');
 
-      this.getGlobalPresence().then((data) => {
-        if (data == null) {
-          Logger.debug('Null or undefined returned from global presence api');
-        }
+      const globalData = await this.getGlobalPresence();
 
-        const occupiedRoomsNames = new Set<string>([...Object.keys(data)]);
+      if (globalData == null) {
+        Logger.debug('Null or undefined returned from global presence api');
+        return;
+      }
 
-        Logger.debug('Occupied room names: ', [...occupiedRoomsNames]);
+      const inProgressList = await this.inprogressService.findAll();
+      Logger.debug('Database values: ', inProgressList);
+      const inProgress = this.toInProgressMap(inProgressList);
 
-        [...this._presence].forEach(([roomName, { confirmed }]) => {
-          if (occupiedRoomsNames.has(roomName) && !confirmed) {
-            const inProgress = this._presence.get(roomName);
-            if (inProgress) {
-              this._presence.set(roomName, { ...inProgress, confirmed: true });
-            } else {
-              Logger.warn(
-                "A room name has come back from the presence api that we don't have a record of: ",
-                roomName,
-              );
-            }
-          }
-        });
+      const occupiedRoomsNames = new Set<string>([...Object.keys(globalData)]);
 
-        const finishedMeetings = [...this._presence].reduce(
-          (finished, [roomName, { confirmed, messageId }]) => {
-            if (!occupiedRoomsNames.has(roomName) && confirmed) {
-              const chatIds = this.roomNameToChatIds(roomName);
-              chatIds.forEach((chatId) =>
-                finished.push(createMeeting(chatId, roomName, messageId)),
-              );
-            }
-            return finished;
-          },
-          [] as Meeting[],
-        );
+      Logger.debug('Occupied room names: ', [...occupiedRoomsNames]);
 
-        if (finishedMeetings.length > 0) {
-          this.openChat.meetingsFinished(finishedMeetings).then((finished) => {
-            Logger.debug('Successfully finished: ', finished);
-            // all the meetings that we successfully marked finished need to be removed from the db
-            finished.forEach((meeting) => {
-              this._presence.delete(meeting.roomName);
+      inProgressList.forEach(({ roomName, confirmed }) => {
+        if (occupiedRoomsNames.has(roomName) && !confirmed) {
+          const inprog = inProgress.get(roomName);
+          if (inprog) {
+            this.inprogressService.upsert({
+              messageId: inprog.messageId,
+              roomName: inprog.roomName,
+              confirmed: true,
             });
-
-            Logger.debug(
-              'After ending meetings, video bridge presence state: ',
-              this._presence,
+          } else {
+            Logger.warn(
+              "A room name has come back from the presence api that we don't have a record of: ",
+              roomName,
             );
-          });
+          }
         }
       });
+
+      const finishedMeetings = [...inProgress].reduce(
+        (finished, [roomName, { confirmed, messageId }]) => {
+          if (!occupiedRoomsNames.has(roomName) && confirmed) {
+            const chatIds = this.roomNameToChatIds(roomName);
+            chatIds.forEach((chatId) =>
+              finished.push(createMeeting(chatId, roomName, messageId)),
+            );
+          }
+          return finished;
+        },
+        [] as Meeting[],
+      );
+
+      if (finishedMeetings.length > 0) {
+        this.openChat.meetingsFinished(finishedMeetings).then((finished) => {
+          Logger.debug('Successfully finished: ', finished);
+          // all the meetings that we successfully marked finished need to be removed from the db
+          finished.forEach((meeting) => {
+            this.inprogressService.delete(meeting.roomName);
+          });
+        });
+      }
     } catch (err) {
       Logger.error('There was an error in the recuring presence job', err);
     }

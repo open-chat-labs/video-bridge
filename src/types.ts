@@ -56,15 +56,30 @@ export function mapChatId(chatId: ApiChatIdentifier): ChatIdentifier {
 export function createMeeting(
   chatId: ChatIdentifier,
   roomName: string,
-  messageId: bigint,
+  messageId: string,
 ): Meeting {
   switch (chatId.kind) {
     case 'channel':
-      return { kind: 'channel_meeting', chatId, roomName, messageId };
+      return {
+        kind: 'channel_meeting',
+        chatId,
+        roomName,
+        messageId: BigInt(messageId),
+      };
     case 'direct_chat':
-      return { kind: 'direct_meeting', chatId, roomName, messageId };
+      return {
+        kind: 'direct_meeting',
+        chatId,
+        roomName,
+        messageId: BigInt(messageId),
+      };
     case 'group_chat':
-      return { kind: 'group_meeting', chatId, roomName, messageId };
+      return {
+        kind: 'group_meeting',
+        chatId,
+        roomName,
+        messageId: BigInt(messageId),
+      };
   }
 }
 
