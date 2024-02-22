@@ -16,7 +16,7 @@ import {
 } from './types';
 import { ConfigService } from '@nestjs/config';
 import { DailyRoomInfo } from '@daily-co/daily-js';
-import { Cron, CronExpression, Interval } from '@nestjs/schedule';
+import { Interval } from '@nestjs/schedule';
 import { OpenChatService } from './openchat/openchat.service';
 import { chatIdToRoomName, roomNameToChatIds } from './utils';
 
@@ -273,6 +273,7 @@ export class AppService {
       headers: this.getAuthHeaders(),
     })
       .then((res) => {
+        Logger.debug('Global Presence response: ', res);
         if (!res.ok) {
           res.text().then((err) => {
             Logger.error('Error getting global presence: ', err);
@@ -296,6 +297,10 @@ export class AppService {
       Logger.debug('Getting global presence data');
 
       this.getGlobalPresence().then((data) => {
+        if (data == null) {
+          Logger.debug('Null or undefined returned from global presence api');
+        }
+
         const occupiedRoomsNames = new Set<string>([...Object.keys(data)]);
 
         Logger.debug('Occupied room names: ', [...occupiedRoomsNames]);
