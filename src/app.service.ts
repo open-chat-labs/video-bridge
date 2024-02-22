@@ -196,7 +196,8 @@ export class AppService {
   }
 
   private decodeJwt(token: string): TokenPayload {
-    const publicKey = this.configService.get('OC_PUBLIC');
+    const rawKey = this.configService.get('OC_PUBLIC');
+    const publicKey = rawKey.replace(/\\n/g, '\n');
     Logger.debug('Encoded: ', token, publicKey);
     let decoded: TokenPayload | undefined = undefined;
     try {
