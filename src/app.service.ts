@@ -16,7 +16,7 @@ import {
 } from './types';
 import { ConfigService } from '@nestjs/config';
 import { DailyRoomInfo } from '@daily-co/daily-js';
-import { Cron, CronExpression } from '@nestjs/schedule';
+import { Cron, CronExpression, Interval } from '@nestjs/schedule';
 import { OpenChatService } from './openchat/openchat.service';
 import { chatIdToRoomName, roomNameToChatIds } from './utils';
 
@@ -290,8 +290,8 @@ export class AppService {
     return this._presence;
   }
 
-  @Cron(CronExpression.EVERY_30_SECONDS, { disabled: false })
-  handleCron() {
+  @Interval(15000)
+  checkGlobalPresence() {
     try {
       Logger.debug('Getting global presence data');
 
