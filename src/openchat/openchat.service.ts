@@ -96,7 +96,6 @@ export class OpenChatService {
 
   private createIdentity() {
     const privateKey = this.configService.get('OC_IDENTITY');
-    Logger.debug('Key via env: ', privateKey);
     try {
       const buf = Buffer.from(privateKey, 'base64');
       if (buf.length != 118) {
