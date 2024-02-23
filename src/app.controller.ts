@@ -1,12 +1,17 @@
 import {
+  Body,
   Controller,
   Get,
   Headers,
+  HttpCode,
+  Post,
   Query,
   UnauthorizedException,
+  UseGuards,
 } from '@nestjs/common';
 import { AppService } from './app.service';
-import { AccessTokenResponse } from './types';
+import { AccessTokenResponse, DailyEvent } from './types';
+import { AuthGuard } from './hookAuth';
 
 @Controller('room')
 export class AppController {
@@ -32,5 +37,12 @@ export class AppController {
       );
     }
     return this.appService.getAccessToken(username, auth);
+  }
+
+  @Post('hook')
+  @HttpCode(200)
+  @UseGuards(AuthGuard)
+  dailyEvent(@Body() payload: DailyEvent) {
+    this.appService.dailyEvent(payload);
   }
 }

@@ -9,6 +9,7 @@ import {
   AccessTokenResponse,
   ApiTokenPayload,
   ChatIdentifier,
+  DailyEvent,
   Meeting,
   TokenPayload,
   createMeeting,
@@ -367,5 +368,9 @@ export class AppService {
     } catch (err) {
       Logger.error('There was an error in the recuring presence job', err);
     }
+  }
+
+  dailyEvent(payload: DailyEvent) {
+    Logger.debug('Received an event from Daily.js: ', payload);
   }
 }

@@ -134,3 +134,16 @@ export class AccessTokenRequest {
   username: string;
   chatId: ChatIdentifier;
 }
+
+export class DailyEvent {
+  version: string;
+  type: string;
+  id: string;
+  payload: {
+    start_ts: number;
+    end_ts?: number;
+    meeting_id: string; // interesting - what is a meeting
+    room: string;
+  };
+  event_ts: number;
+}
