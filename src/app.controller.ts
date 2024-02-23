@@ -12,7 +12,7 @@ import {
 import { AppService } from './app.service';
 import { AccessTokenResponse, DailyEvent } from './types';
 import { ConfigService } from '@nestjs/config';
-import crypto from 'crypto';
+import * as crypto from 'crypto';
 
 @Controller('room')
 export class AppController {
