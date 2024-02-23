@@ -1,0 +1,33 @@
+version: '3'
+
+services:
+  server:
+    build: ./
+    container_name: video_bridge_api
+    environment:
+      - DAILY_API_KEY=${DAILY_API_KEY}
+      - OC_IDENTITY=${OC_IDENTITY}
+      - OC_PUBLIC=${OC_PUBLIC}
+      - MONGO_URI=mongodb://video_bridge_db:27017/video_bridge
+      - IC_URL=${IC_URL}
+      - PORT=5050
+    ports:
+      - 5050:5050
+    depends_on:
+      - database
+    networks:
+      - video_bridge_network
+
+  database:
+    image: mongo:latest
+    container_name: video_bridge_db
+    environment:
+      - MONGODB_DATABASE="video_bridge"
+    ports:
+      - 27017:27017
+    networks:
+      - video_bridge_network
+
+networks:
+  video_bridge_network:
+    driver: bridge

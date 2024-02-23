@@ -24,3 +24,20 @@ We need to also keep the OC backend up to date with which chats currently have a
 The do this we call daily's global presence api which will tell us about all rooms that have active participants. By monitoring
 how this state changes over time we can derive when meetings start and end and call into the OC backend to update it. There is considerable latency on the
 daily.co presence endpoint and we would hope to replace this with webhooks as and when they become available (scheduled for Q1 2024).
+
+## Running locally
+
+The solution requires both the nestjs web server and a running mongodb instance to work. To simplify this we use docker compose. Make sure that you have docker installed on your machine, then you should be able to simply run:
+
+`docker compose up`
+
+to get the service up and running on `localhost:5050`
+
+**Note** that this relies on a number of environment variables that should be provided via a local .env file which should look something like this:
+
+```
+DAILY_API_KEY=***************************************************
+OC_IDENTITY=*****************************************************
+OC_PUBLIC=*******************************************************
+IC_URL=**********************************************************
+```
