@@ -4,18 +4,22 @@ import {
   Get,
   Headers,
   HttpCode,
+  Logger,
   Post,
   Query,
   UnauthorizedException,
-  UseGuards,
 } from '@nestjs/common';
 import { AppService } from './app.service';
 import { AccessTokenResponse, DailyEvent } from './types';
-import { AuthGuard } from './hookAuth';
+import { ConfigService } from '@nestjs/config';
+import crypto from 'crypto';
 
 @Controller('room')
 export class AppController {
-  constructor(private readonly appService: AppService) {}
+  constructor(
+    private configService: ConfigService,
+    private readonly appService: AppService,
+  ) {}
 
   /**
    * This returns the internal state of the video bridge and indicates which meetings it currently
@@ -39,10 +43,38 @@ export class AppController {
     return this.appService.getAccessToken(username, auth);
   }
 
+  private isValid(
+    timestamp: string,
+    signatureHeader: string,
+    body: DailyEvent,
+  ): boolean {
+    const secret = this.configService.get<string>('DAILY_HOOK_HMAC');
+
+    Logger.debug(
+      'Hook auth params: ',
+      timestamp,
+      signatureHeader,
+      secret,
+      body,
+    );
+    const signature = timestamp + '.' + JSON.stringify(body);
+    const base64DecodedSecret = Buffer.from(secret, 'base64');
+    const hmac = crypto.createHmac('sha256', base64DecodedSecret);
+    const computed = hmac.update(signature).digest('base64');
+    return computed === signatureHeader;
+  }
+
   @Post('hook')
   @HttpCode(200)
-  @UseGuards(AuthGuard)
-  dailyEvent(@Body() payload: DailyEvent) {
-    this.appService.dailyEvent(payload);
+  dailyEvent(
+    @Headers('X-Webhook-Timestamp') timestamp: string,
+    @Headers('X-Webhook-Signature') signature: string,
+    @Body() payload: DailyEvent,
+  ) {
+    if (this.isValid(timestamp, signature, payload)) {
+      this.appService.dailyEvent(payload);
+    } else {
+      Logger.debug('Hook received from daily js does not pass validation');
+    }
   }
 }
