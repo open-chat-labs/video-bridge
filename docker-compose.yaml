@@ -10,6 +10,7 @@ services:
       - OC_PUBLIC=${OC_PUBLIC}
       - MONGO_URI=mongodb://video_bridge_db:27017/video_bridge
       - IC_URL=${IC_URL}
+      - DAILY_HOOK_HMAC=${DAILY_HOOK_HMAC}
       - PORT=5050
     ports:
       - 5050:5050
