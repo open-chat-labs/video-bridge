@@ -308,21 +308,21 @@ export class AppService {
   @Interval(15000)
   async checkGlobalPresence() {
     try {
-      Logger.debug('Getting global presence data');
+      const inProgressList = await this.inprogressService.findAll();
+      if (inProgressList.length === 0) {
+        // if we don't think there are any meetings in progress there is no point in calling the presence api
+        Logger.debug('No meetings in progress - doing nothing');
+        return;
+      }
 
+      const inProgress = this.toInProgressMap(inProgressList);
       const globalData = await this.getGlobalPresence();
-
       if (globalData == null) {
         Logger.debug('Null or undefined returned from global presence api');
         return;
       }
 
-      const inProgressList = await this.inprogressService.findAll();
-      Logger.debug('Database values: ', inProgressList);
-      const inProgress = this.toInProgressMap(inProgressList);
-
       const occupiedRoomsNames = new Set<string>([...Object.keys(globalData)]);
-
       Logger.debug('Occupied room names: ', [...occupiedRoomsNames]);
 
       inProgressList.forEach(({ roomName, confirmed }) => {
@@ -356,21 +356,32 @@ export class AppService {
         [] as Meeting[],
       );
 
-      if (finishedMeetings.length > 0) {
-        this.openChat.meetingsFinished(finishedMeetings).then((finished) => {
-          Logger.debug('Successfully finished: ', finished);
-          // all the meetings that we successfully marked finished need to be removed from the db
-          finished.forEach((meeting) => {
-            this.inprogressService.delete(meeting.roomName);
-          });
-        });
-      }
+      this.processFinishedMeetings(finishedMeetings);
     } catch (err) {
       Logger.error('There was an error in the recuring presence job', err);
     }
   }
 
-  meetingEndedEvent(payload: MeetingEndedEvent) {
+  async meetingEndedEvent({ payload }: MeetingEndedEvent) {
     Logger.debug('Received an event from Daily.js: ', payload);
+    const inProgressList = await this.inprogressService.findAll();
+    const meeting = inProgressList.find((p) => p.roomName === payload.room);
+    const chatIds = this.roomNameToChatIds(meeting.roomName);
+    const finished = chatIds.map((chatId) =>
+      finished.push(createMeeting(chatId, meeting.roomName, meeting.messageId)),
+    );
+    this.processFinishedMeetings(finished);
+  }
+
+  private processFinishedMeetings(finishedMeetings: Meeting[]) {
+    if (finishedMeetings.length > 0) {
+      this.openChat.meetingsFinished(finishedMeetings).then((finished) => {
+        Logger.debug('Successfully finished: ', finished);
+        // all the meetings that we successfully marked finished need to be removed from the db
+        finished.forEach((meeting) => {
+          this.inprogressService.delete(meeting.roomName);
+        });
+      });
+    }
   }
 }

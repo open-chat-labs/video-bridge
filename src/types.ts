@@ -137,12 +137,12 @@ export class AccessTokenRequest {
 
 export class MeetingEndedEvent {
   version: string;
-  type: string;
+  type: 'meeting.ended';
   id: string;
   payload: {
     start_ts: number;
     end_ts: number;
-    meeting_id: string; // interesting - what is a meeting
+    meeting_id: string;
     room: string;
   };
   event_ts: number;
