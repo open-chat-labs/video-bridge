@@ -6,7 +6,6 @@
   "private": true,
   "license": "UNLICENSED",
   "scripts": {
-    "docker:prod": "docker compose up server database",
     "docker:dev": "docker compose up dev-server database",
     "build": "nest build",
     "deploy": "sh ./deploy.sh",

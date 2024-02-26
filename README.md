@@ -44,3 +44,46 @@ OC_PUBLIC=*******************************************************
 IC_URL=**********************************************************
 DAILY_HOOK_HMAC=*************************************************
 ```
+
+## Running in prod
+
+This is more of a note to self for some relevant docker commands. You can just pull this repo as into a folder on the prod machine (ec2 instance) and then make sure that .env file noted above also exists on this machine (double check the docker-compose.yaml for the relevant env vars).
+
+First you will need to ssh to the prod machine which will be something like:
+
+`ssh -i "video_bridge.pem" ubuntu@ec2-75-101-243-180.compute-1.amazonaws.com`
+
+Then `cd video-bridge` to get into the home directory for the service.
+
+To start up the production images:
+
+`sudo docker compose up server database -d`
+
+This will build and run the images in the background.
+
+To check whether they are runnin ok:
+
+`sudo docker ps`
+
+To tail the logs of the running services:
+
+`sudo docker compose logs -f`
+
+To shutdown the running services:
+
+`sudo docker compose down`
+
+To clean up all docker resources (if the machine runs out of space or something):
+
+`sudo docker system prune -a -f --volumes`
+
+If the service code has been updated:
+
+```
+git pull
+sudo docker compose down server
+sudo docker compose build server
+sudo docker compose up server -d
+```
+
+Note that this update procedure will cause downtime to the video call feature so it would be good to come up with something better.
