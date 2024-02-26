@@ -368,7 +368,7 @@ export class AppService {
     const meeting = inProgressList.find((p) => p.roomName === payload.room);
     const chatIds = this.roomNameToChatIds(meeting.roomName);
     const finished = chatIds.map((chatId) =>
-      finished.push(createMeeting(chatId, meeting.roomName, meeting.messageId)),
+      createMeeting(chatId, meeting.roomName, meeting.messageId),
     );
     this.processFinishedMeetings(finished);
   }
