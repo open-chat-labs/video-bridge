@@ -1,6 +1,29 @@
 version: '3'
 
 services:
+  dev-server:
+    build:
+      context: ./
+      dockerfile: Dockerfile.dev
+    container_name: video_bridge_dev_api
+    environment:
+      - DAILY_API_KEY=${DAILY_API_KEY}
+      - OC_IDENTITY=${OC_IDENTITY}
+      - OC_PUBLIC=${OC_PUBLIC}
+      - MONGO_URI=mongodb://video_bridge_db:27017/video_bridge
+      - IC_URL=${IC_URL}
+      - DAILY_HOOK_HMAC=${DAILY_HOOK_HMAC}
+      - PORT=5050
+    volumes:
+      - ./src:/video_bridge/src
+      - ./node_modules:/video_bridge/node_modules
+    ports:
+      - 5050:5050
+    depends_on:
+      - database
+    networks:
+      - video_bridge_network
+
   server:
     build: ./
     container_name: video_bridge_api

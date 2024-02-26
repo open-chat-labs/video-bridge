@@ -29,9 +29,11 @@ daily.co presence endpoint and we would hope to replace this with webhooks as an
 
 The solution requires both the nestjs web server and a running mongodb instance to work. To simplify this we use docker compose. Make sure that you have docker installed on your machine, then you should be able to simply run:
 
-`docker compose up`
+`npm run docker:dev'
 
 to get the service up and running on `localhost:5050`
+
+This will start two docker containers, one running a local instance of mongodb and one running the nestjs web server. The nest container has volumes mapped to your local files and nestjs will be running in watch mode so hot reloading will work as normal.
 
 **Note** that this relies on a number of environment variables that should be provided via a local .env file which should look something like this:
 
@@ -40,4 +42,5 @@ DAILY_API_KEY=***************************************************
 OC_IDENTITY=*****************************************************
 OC_PUBLIC=*******************************************************
 IC_URL=**********************************************************
+DAILY_HOOK_HMAC=*************************************************
 ```

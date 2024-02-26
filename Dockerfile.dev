@@ -1,0 +1,13 @@
+# build stage
+FROM node:18-alpine as build
+
+WORKDIR /video_bridge
+
+COPY . . 
+
+RUN npm i -g @nestjs/cli
+RUN npm i
+
+EXPOSE 5050
+
+CMD [ "npm", "run", "start:dev" ]
