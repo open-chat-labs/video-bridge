@@ -366,11 +366,13 @@ export class AppService {
     Logger.debug('Received an event from Daily.js: ', payload);
     const inProgressList = await this.inprogressService.findAll();
     const meeting = inProgressList.find((p) => p.roomName === payload.room);
-    const chatIds = this.roomNameToChatIds(meeting.roomName);
-    const finished = chatIds.map((chatId) =>
-      createMeeting(chatId, meeting.roomName, meeting.messageId),
-    );
-    this.processFinishedMeetings(finished);
+    if (meeting !== undefined) {
+      const chatIds = this.roomNameToChatIds(meeting.roomName);
+      const finished = chatIds.map((chatId) =>
+        createMeeting(chatId, meeting.roomName, meeting.messageId),
+      );
+      this.processFinishedMeetings(finished);
+    }
   }
 
   private processFinishedMeetings(finishedMeetings: Meeting[]) {
