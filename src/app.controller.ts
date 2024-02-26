@@ -10,7 +10,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { AppService } from './app.service';
-import { AccessTokenResponse, DailyEvent } from './types';
+import { AccessTokenResponse, MeetingEndedEvent } from './types';
 import { ConfigService } from '@nestjs/config';
 import * as crypto from 'crypto';
 
@@ -43,20 +43,13 @@ export class AppController {
     return this.appService.getAccessToken(username, auth);
   }
 
+  /** Verify the event signature so we are sure it came from daily */
   private isValid(
     timestamp: string,
     signatureHeader: string,
-    body: DailyEvent,
+    body: MeetingEndedEvent,
   ): boolean {
     const secret = this.configService.get<string>('DAILY_HOOK_HMAC');
-
-    Logger.debug(
-      'Hook auth params: ',
-      timestamp,
-      signatureHeader,
-      secret,
-      body,
-    );
     const signature = timestamp + '.' + JSON.stringify(body);
     const base64DecodedSecret = Buffer.from(secret, 'base64');
     const hmac = crypto.createHmac('sha256', base64DecodedSecret);
@@ -66,15 +59,15 @@ export class AppController {
 
   @Post('hook')
   @HttpCode(200)
-  dailyEvent(
+  meetingEndedEvent(
     @Headers('X-Webhook-Timestamp') timestamp: string,
     @Headers('X-Webhook-Signature') signature: string,
-    @Body() payload: DailyEvent,
+    @Body() payload: MeetingEndedEvent,
   ) {
     if (this.isValid(timestamp, signature, payload)) {
-      this.appService.dailyEvent(payload);
+      this.appService.meetingEndedEvent(payload);
     } else {
-      Logger.debug('Hook received from daily js does not pass validation');
+      Logger.error('Hook received from daily js does not pass validation');
     }
   }
 }

@@ -9,8 +9,8 @@ import {
   AccessTokenResponse,
   ApiTokenPayload,
   ChatIdentifier,
-  DailyEvent,
   Meeting,
+  MeetingEndedEvent,
   TokenPayload,
   createMeeting,
   mapTokenPayload,
@@ -370,7 +370,7 @@ export class AppService {
     }
   }
 
-  dailyEvent(payload: DailyEvent) {
+  meetingEndedEvent(payload: MeetingEndedEvent) {
     Logger.debug('Received an event from Daily.js: ', payload);
   }
 }
