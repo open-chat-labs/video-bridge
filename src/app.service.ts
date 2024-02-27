@@ -202,7 +202,6 @@ export class AppService {
   private decodeJwt(token: string): TokenPayload {
     const rawKey = this.configService.get('OC_PUBLIC');
     const publicKey = rawKey.replace(/\\n/g, '\n');
-    Logger.debug('Encoded: ', token, publicKey);
     let decoded: TokenPayload | undefined = undefined;
     try {
       decoded = mapTokenPayload(
@@ -210,7 +209,6 @@ export class AppService {
           algorithms: ['ES256'],
         }) as ApiTokenPayload,
       ) as TokenPayload;
-      Logger.debug('Decoded: ', decoded);
     } catch (err) {
       Logger.error('Error verifying access token: ', err);
       throw new UnauthorizedException(
