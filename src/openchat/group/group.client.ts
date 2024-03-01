@@ -2,7 +2,7 @@ import { Logger } from '@nestjs/common';
 import { CandidService } from '../candidService';
 import { GroupService, idlFactory } from './candid/idl';
 import { Principal } from '@dfinity/principal';
-import { generateUint64, newMessageId } from '../../utils';
+import { generateUint64 } from '../../utils';
 import { Identity } from '@dfinity/agent';
 import { GroupMeeting } from '../../types';
 
@@ -22,8 +22,7 @@ export class GroupClient extends CandidService {
     );
   }
 
-  sendVideoCallStartedMessage(userId: string): Promise<bigint> {
-    const msgId = newMessageId();
+  sendVideoCallStartedMessage(msgId: bigint, userId: string): Promise<bigint> {
     return this.handleResponse(
       this.groupService.send_message_v2({
         content: {

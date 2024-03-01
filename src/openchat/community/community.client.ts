@@ -2,7 +2,6 @@ import { Logger } from '@nestjs/common';
 import { CandidService } from '../candidService';
 import { CommunityService, idlFactory } from './candid/idl';
 import { Principal } from '@dfinity/principal';
-import { newMessageId } from '../../utils';
 import { Identity } from '@dfinity/agent';
 import { ChannelMeeting } from '../../types';
 
@@ -23,10 +22,10 @@ export class CommunityClient extends CandidService {
   }
 
   sendVideoCallStartedMessage(
+    msgId: bigint,
     channelId: string,
     userId: string,
   ): Promise<bigint> {
-    const msgId = newMessageId();
     return this.handleResponse(
       this.communityService.send_message({
         channel_id: BigInt(channelId),

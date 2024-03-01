@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ChatIdentifier, Meeting } from '../types';
-import { waitAll } from '../utils';
+import { newMessageId, waitAll } from '../utils';
 import { GroupClient } from './group/group.client';
 import { Secp256k1KeyIdentity } from '@dfinity/identity-secp256k1';
 import { Identity } from '@dfinity/agent';
@@ -16,29 +16,32 @@ export class OpenChatService {
     this._identity = this.createIdentity();
   }
 
-  sendVideoCallStartedMessage(
-    userId: string,
-    chatId: ChatIdentifier,
-  ): Promise<bigint> {
+  sendVideoCallStartedMessage(userId: string, chatId: ChatIdentifier): bigint {
     Logger.debug('Sending a video chat started message to OpenChat', chatId);
+    const msgId = newMessageId();
 
-    //TODO come back and make sure that we don't wait for this message to send
+    // TODO - this is all fire and forget but we do need to add a retry
     switch (chatId.kind) {
       case 'channel':
         const communityClient = this.getCommunityClient(chatId.communityId);
-        return communityClient.sendVideoCallStartedMessage(
+        communityClient.sendVideoCallStartedMessage(
+          msgId,
           chatId.channelId,
           userId,
         );
+        break;
       case 'group_chat':
         const groupClient = this.getGroupClient(chatId.groupId);
-        return groupClient.sendVideoCallStartedMessage(userId);
+        groupClient.sendVideoCallStartedMessage(msgId, userId);
+        break;
       case 'direct_chat':
         const otherUserClient = this.getUserClient(chatId.userId);
-        return otherUserClient.sendVideoCallStartedMessage(userId);
+        otherUserClient.sendVideoCallStartedMessage(msgId, userId);
+        break;
       default:
         throw new Error('not implemented');
     }
+    return msgId;
   }
 
   async meetingsFinished(meetings: Meeting[]): Promise<Meeting[]> {
