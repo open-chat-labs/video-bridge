@@ -13,9 +13,7 @@ export class OpenChatService {
   _identity: Secp256k1KeyIdentity;
 
   constructor(private configService: ConfigService) {
-    Logger.debug('Constructing the OpenChatService');
     this._identity = this.createIdentity();
-    Logger.debug('Principal: ', this._identity.getPrincipal().toString());
   }
 
   sendVideoCallStartedMessage(

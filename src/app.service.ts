@@ -29,18 +29,7 @@ export class AppService {
     private inprogressService: InProgressService,
     private configService: ConfigService,
     private openChat: OpenChatService,
-  ) {
-    Logger.debug('Constructing the app service');
-
-    inprogressService
-      .findAll()
-      .then((all) => {
-        Logger.debug('Presence: ', all);
-      })
-      .catch((err) => {
-        Logger.error('Error loading docs: ', err);
-      });
-  }
+  ) {}
 
   private getAuthHeaders(): Headers {
     const apiKey = this.configService.get('DAILY_API_KEY');
@@ -225,18 +214,12 @@ export class AppService {
   ): Promise<AccessTokenResponse> {
     try {
       const decoded = this.decodeJwt(authToken);
-      Logger.debug('Auth token has been decoded: ', decoded);
-
       const roomName = this.chatIdToRoomName(decoded.userId, decoded.chatId);
 
       const exists = await this.roomExists(roomName);
       if (!exists) {
-        Logger.debug('There is no existing room for chatId: ', roomName);
-        Logger.debug("Let's try to create one");
         const room = await this.createRoom(roomName);
         Logger.debug('We created the room: ', room);
-      } else {
-        Logger.debug('Room already exists - no need to create it');
       }
 
       const messageId = await this.sendStartMessageToOpenChat(
@@ -254,15 +237,11 @@ export class AppService {
         });
       }
       Logger.debug('Meeting start messageId ', messageId);
-
-      Logger.debug('About to get the meeting token');
       const token = await this.getMeetingToken(
         roomName,
         decoded.userId,
         username,
       );
-
-      Logger.debug('Returning meeting token to the UI: ', token);
 
       return {
         token,
@@ -279,7 +258,6 @@ export class AppService {
       headers: this.getAuthHeaders(),
     })
       .then((res) => {
-        Logger.debug('Global Presence response: ', res);
         if (!res.ok) {
           res.text().then((err) => {
             Logger.error('Error getting global presence: ', err);
