@@ -170,14 +170,17 @@ export class AppService {
   }
 
   private async sendStartMessageToOpenChat(
-    roomId: string,
+    roomName: string,
     userId: string,
     chatId: ChatIdentifier,
   ): Promise<bigint | undefined> {
-    Logger.debug('Checking the participants for roomId', roomId);
-    const participantsCount = await this.getRoomParticipantsCount(roomId);
-    if (participantsCount === 0) {
-      return this.openChat.sendVideoCallStartedMessage(userId, chatId);
+    const inprog = await this.inprogressService.get(roomName);
+    if (!inprog) {
+      Logger.debug('Checking the participants for roomId', roomName);
+      const participantsCount = await this.getRoomParticipantsCount(roomName);
+      if (participantsCount === 0) {
+        return this.openChat.sendVideoCallStartedMessage(userId, chatId);
+      }
     }
   }
 
@@ -272,20 +275,17 @@ export class AppService {
   }
 
   getMeetings() {
-    return this.inprogressService.findAll();
+    return this.inprogressService.getAll();
   }
 
   private toInProgressMap(inprog: InProgress[]): Map<string, InProgress> {
-    return inprog.reduce((m, i) => {
-      m.set(i.roomName, i);
-      return m;
-    }, new Map<string, InProgress>());
+    return new Map(inprog.map((m) => [m.roomName, m]));
   }
 
   @Interval(15000)
   async checkGlobalPresence() {
     try {
-      const inProgressList = await this.inprogressService.findAll();
+      const inProgressList = await this.inprogressService.getAll();
       if (inProgressList.length === 0) {
         // if we don't think there are any meetings in progress there is no point in calling the presence api
         Logger.debug('No meetings in progress - doing nothing');
@@ -341,7 +341,7 @@ export class AppService {
 
   async meetingEndedEvent({ payload }: MeetingEndedEvent) {
     Logger.debug('Received an event from Daily.js: ', payload);
-    const inProgressList = await this.inprogressService.findAll();
+    const inProgressList = await this.inprogressService.getAll();
     const meeting = inProgressList.find((p) => p.roomName === payload.room);
     if (meeting !== undefined) {
       const chatIds = this.roomNameToChatIds(meeting.roomName);

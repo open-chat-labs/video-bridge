@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { CreateInProgressDto } from './inprogress.dto';
@@ -20,16 +20,16 @@ export class InProgressService {
     return upserted.acknowledged;
   }
 
-  async findAll(): Promise<InProgress[]> {
+  getAll(): Promise<InProgress[]> {
     return this.inProgressModel.find().exec();
   }
 
-  async findOne(id: string): Promise<InProgress> {
-    return this.inProgressModel.findOne({ _id: id }).exec();
+  get(roomName: string): Promise<InProgress | undefined> {
+    return this.inProgressModel.findOne({ roomName }).exec();
   }
 
-  async delete(roomName: string) {
+  async delete(roomName: string): Promise<boolean> {
     const deleted = await this.inProgressModel.deleteOne({ roomName }).exec();
-    return deleted;
+    return deleted.acknowledged;
   }
 }

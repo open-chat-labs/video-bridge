@@ -22,6 +22,7 @@ export class OpenChatService {
   ): Promise<bigint> {
     Logger.debug('Sending a video chat started message to OpenChat', chatId);
 
+    //TODO come back and make sure that we don't wait for this message to send
     switch (chatId.kind) {
       case 'channel':
         const communityClient = this.getCommunityClient(chatId.communityId);
@@ -33,8 +34,8 @@ export class OpenChatService {
         const groupClient = this.getGroupClient(chatId.groupId);
         return groupClient.sendVideoCallStartedMessage(userId);
       case 'direct_chat':
-        const userClient = this.getUserClient(chatId.userId);
-        return userClient.sendVideoCallStartedMessage(userId);
+        const otherUserClient = this.getUserClient(chatId.userId);
+        return otherUserClient.sendVideoCallStartedMessage(userId);
       default:
         throw new Error('not implemented');
     }
