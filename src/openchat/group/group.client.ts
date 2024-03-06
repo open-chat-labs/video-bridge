@@ -2,7 +2,6 @@ import { Logger } from '@nestjs/common';
 import { CandidService } from '../candidService';
 import { GroupService, idlFactory } from './candid/idl';
 import { Principal } from '@dfinity/principal';
-import { generateUint64 } from '../../utils';
 import { Identity } from '@dfinity/agent';
 import { GroupMeeting } from '../../types';
 
@@ -24,22 +23,9 @@ export class GroupClient extends CandidService {
 
   sendVideoCallStartedMessage(msgId: bigint, userId: string): Promise<bigint> {
     return this.handleResponse(
-      this.groupService.send_message_v2({
-        content: {
-          VideoCall: {
-            initiator: Principal.fromText(userId),
-          },
-        },
+      this.groupService.start_video_call({
         message_id: msgId,
-        sender_name: 'video_bridge_operator',
-        sender_display_name: [],
-        rules_accepted: [],
-        replies_to: [],
-        mentioned: [],
-        forwarding: false,
-        thread_root_message_index: [],
-        message_filter_failed: [],
-        correlation_id: generateUint64(),
+        initiator: Principal.fromText(userId),
       }),
       (res) => {
         if ('Success' in res) {

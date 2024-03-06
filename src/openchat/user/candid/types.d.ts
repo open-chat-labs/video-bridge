@@ -22,7 +22,7 @@ export type AccessGate = { 'VerifiedCredential' : VerifiedCredentialGate } |
 export type AccessGateUpdate = { 'NoChange' : null } |
   { 'SetToNone' : null } |
   { 'SetToSome' : AccessGate };
-export type AccessTokenType = { 'JoinVideoCall' : MessageIndex } |
+export type AccessTokenType = { 'JoinVideoCall' : null } |
   { 'StartVideoCall' : null };
 export type AccessorId = Principal;
 export interface Account {
@@ -1191,6 +1191,7 @@ export type LeaveGroupResponse = { 'GroupNotFound' : null } |
   { 'Success' : null } |
   { 'UserSuspended' : null } |
   { 'InternalError' : string };
+export type LocalUserIndexResponse = { 'Success' : CanisterId };
 export interface ManageFavouriteChatsArgs {
   'to_add' : Array<Chat>,
   'to_remove' : Array<Chat>,
@@ -1242,8 +1243,7 @@ export type MessageContent = { 'VideoCall' : VideoCallContent } |
   { 'Deleted' : DeletedContent } |
   { 'MessageReminderCreated' : MessageReminderCreated } |
   { 'MessageReminder' : MessageReminder };
-export type MessageContentInitial = { 'VideoCall' : VideoCallContentInitial } |
-  { 'Giphy' : GiphyContent } |
+export type MessageContentInitial = { 'Giphy' : GiphyContent } |
   { 'File' : FileContent } |
   { 'Poll' : PollContent } |
   { 'Text' : TextContent } |
@@ -1758,15 +1758,7 @@ export type SendMessageResponse = { 'TextTooLong' : number } |
   } |
   { 'TransferCannotBeZero' : null } |
   { 'DuplicateMessageId' : null } |
-  {
-    'Success' : {
-      'timestamp' : TimestampMillis,
-      'chat_id' : ChatId,
-      'event_index' : EventIndex,
-      'expires_at' : [] | [TimestampMillis],
-      'message_index' : MessageIndex,
-    }
-  } |
+  { 'Success' : SendMessageSuccess } |
   { 'MessageEmpty' : null } |
   { 'InvalidPoll' : InvalidPollReason } |
   { 'RecipientBlocked' : null } |
@@ -1776,6 +1768,13 @@ export type SendMessageResponse = { 'TextTooLong' : number } |
   { 'TransferFailed' : string } |
   { 'InternalError' : string } |
   { 'RecipientNotFound' : null };
+export interface SendMessageSuccess {
+  'timestamp' : TimestampMillis,
+  'chat_id' : ChatId,
+  'event_index' : EventIndex,
+  'expires_at' : [] | [TimestampMillis],
+  'message_index' : MessageIndex,
+}
 export interface SendMessageV2Args {
   'content' : MessageContentInitial,
   'message_filter_failed' : [] | [bigint],
@@ -1918,6 +1917,12 @@ export interface SnsProposal {
   'proposer' : SnsNeuronId,
   'minimum_yes_proportion_of_exercised' : number,
 }
+export interface StartVideoCallArgs {
+  'initiator' : UserId,
+  'message_id' : MessageId,
+}
+export type StartVideoCallResponse = { 'NotAuthorized' : null } |
+  { 'Success' : SendMessageSuccess };
 export type Subaccount = Uint8Array | number[];
 export interface SubmitProposalArgs {
   'token' : Cryptocurrency,
@@ -2271,6 +2276,7 @@ export interface _SERVICE {
   'join_video_call' : ActorMethod<[JoinVideoCallArgs], JoinVideoCallResponse>,
   'leave_community' : ActorMethod<[LeaveCommunityArgs], LeaveCommunityResponse>,
   'leave_group' : ActorMethod<[LeaveGroupArgs], LeaveGroupResponse>,
+  'local_user_index' : ActorMethod<[EmptyArgs], LocalUserIndexResponse>,
   'manage_favourite_chats' : ActorMethod<
     [ManageFavouriteChatsArgs],
     ManageFavouriteChatsResponse
@@ -2316,6 +2322,10 @@ export interface _SERVICE {
   'set_message_reminder_v2' : ActorMethod<
     [SetMessageReminderV2Args],
     SetMessageReminderResponse
+  >,
+  'start_video_call' : ActorMethod<
+    [StartVideoCallArgs],
+    StartVideoCallResponse
   >,
   'submit_proposal' : ActorMethod<[SubmitProposalArgs], SubmitProposalResponse>,
   'swap_tokens' : ActorMethod<[SwapTokensArgs], SwapTokensResponse>,

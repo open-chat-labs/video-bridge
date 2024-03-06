@@ -27,23 +27,10 @@ export class CommunityClient extends CandidService {
     userId: string,
   ): Promise<bigint> {
     return this.handleResponse(
-      this.communityService.send_message({
-        channel_id: BigInt(channelId),
-        content: {
-          VideoCall: {
-            initiator: Principal.fromText(userId),
-          },
-        },
+      this.communityService.start_video_call({
         message_id: msgId,
-        sender_name: 'video_bridge_operator',
-        sender_display_name: [],
-        community_rules_accepted: [],
-        channel_rules_accepted: [],
-        replies_to: [],
-        mentioned: [],
-        forwarding: false,
-        thread_root_message_index: [],
-        message_filter_failed: [],
+        initiator: Principal.fromText(userId),
+        channel_id: BigInt(channelId),
       }),
       (res) => {
         if ('Success' in res) {

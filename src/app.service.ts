@@ -173,14 +173,17 @@ export class AppService {
     roomName: string,
     userId: string,
     chatId: ChatIdentifier,
-  ): Promise<bigint | undefined> {
+  ): Promise<[bigint, boolean]> {
     const inprog = await this.inprogressService.get(roomName);
     if (!inprog) {
       Logger.debug('Checking the participants for roomId', roomName);
       const participantsCount = await this.getRoomParticipantsCount(roomName);
       if (participantsCount === 0) {
-        return this.openChat.sendVideoCallStartedMessage(userId, chatId);
+        const msgId = this.openChat.sendVideoCallStartedMessage(userId, chatId);
+        return [msgId, false];
       }
+    } else {
+      return [BigInt(inprog.messageId), true];
     }
   }
 
@@ -225,14 +228,12 @@ export class AppService {
         Logger.debug('We created the room: ', room);
       }
 
-      const messageId = await this.sendStartMessageToOpenChat(
+      const [messageId, joining] = await this.sendStartMessageToOpenChat(
         roomName,
         decoded.userId,
         decoded.chatId,
       );
-      if (messageId) {
-        // capture that we are tentatively starting a meeting with the associated meeting id
-
+      if (!joining) {
         this.inprogressService.upsert({
           roomName,
           messageId: messageId.toString(),
@@ -249,6 +250,8 @@ export class AppService {
       return {
         token,
         roomName,
+        messageId,
+        joining,
       };
     } catch (err) {
       throw new UnauthorizedException('Error obtaining room access token', err);

@@ -2,7 +2,6 @@ import { Logger } from '@nestjs/common';
 import { CandidService } from '../candidService';
 import { UserService, idlFactory } from './candid/idl';
 import { Principal } from '@dfinity/principal';
-import { generateUint64 } from '../../utils';
 import { Identity } from '@dfinity/agent';
 import { DirectMeeting } from '../../types';
 
@@ -24,19 +23,9 @@ export class UserClient extends CandidService {
 
   sendVideoCallStartedMessage(msgId: bigint, userId: string): Promise<bigint> {
     return this.handleResponse(
-      this.userService.send_message_v2({
-        content: {
-          VideoCall: {
-            initiator: Principal.fromText(userId),
-          },
-        },
-        recipient: Principal.fromText(this.userId),
+      this.userService.start_video_call({
         message_id: msgId,
-        replies_to: [],
-        forwarding: false,
-        thread_root_message_index: [],
-        message_filter_failed: [],
-        correlation_id: generateUint64(),
+        initiator: Principal.fromText(userId),
       }),
       (res) => {
         if ('Success' in res) {

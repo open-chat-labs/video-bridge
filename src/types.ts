@@ -108,6 +108,8 @@ export type ChannelMeeting = MeetingCommon & {
 export type AccessTokenResponse = {
   token: string;
   roomName: string;
+  messageId: bigint;
+  joining: boolean;
 };
 
 export type ChatIdentifier = MultiUserChatIdentifier | DirectChatIdentifier;
