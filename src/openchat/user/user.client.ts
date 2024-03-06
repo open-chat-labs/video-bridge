@@ -21,11 +21,22 @@ export class UserClient extends CandidService {
     );
   }
 
-  sendVideoCallStartedMessage(msgId: bigint, userId: string): Promise<bigint> {
+  sendVideoCallStartedMessage(
+    msgId: bigint,
+    initiatorId: string,
+    initiatorUsername: string,
+    initiatorDisplayName?: string,
+    initiatorAvatarId?: bigint,
+  ): Promise<bigint> {
     return this.handleResponse(
       this.userService.start_video_call({
         message_id: msgId,
-        initiator: Principal.fromText(userId),
+        initiator: Principal.fromText(initiatorId),
+        initiator_username: initiatorUsername,
+        initiator_avatar_id: initiatorAvatarId ? [initiatorAvatarId] : [],
+        initiator_display_name: initiatorDisplayName
+          ? [initiatorDisplayName]
+          : [],
       }),
       (res) => {
         if ('Success' in res) {

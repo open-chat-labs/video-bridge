@@ -1140,7 +1140,7 @@ export const idlFactory = ({ IDL }) => {
   });
   const JoinVideoCallArgs = IDL.Record({
     'user_id' : UserId,
-    'message_index' : MessageIndex,
+    'message_id' : MessageId,
   });
   const JoinVideoCallResponse = IDL.Variant({
     'AlreadyEnded' : IDL.Null,
@@ -1485,12 +1485,15 @@ export const idlFactory = ({ IDL }) => {
     'UserSuspended' : IDL.Null,
   });
   const StartVideoCallArgs = IDL.Record({
+    'initiator_username' : IDL.Text,
     'initiator' : UserId,
+    'initiator_avatar_id' : IDL.Opt(IDL.Nat),
+    'initiator_display_name' : IDL.Opt(IDL.Text),
     'message_id' : MessageId,
   });
   const StartVideoCallResponse = IDL.Variant({
     'NotAuthorized' : IDL.Null,
-    'Success' : SendMessageSuccess,
+    'Success' : IDL.Null,
   });
   const ProposalToSubmitAction = IDL.Variant({
     'UpgradeSnsToNextVersion' : IDL.Null,

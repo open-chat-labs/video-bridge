@@ -171,15 +171,24 @@ export class AppService {
 
   private async sendStartMessageToOpenChat(
     roomName: string,
-    userId: string,
     chatId: ChatIdentifier,
+    initiatorId: string,
+    initiatorUsername: string,
+    initiatorDisplayname?: string,
+    initiatorAvatarId?: bigint,
   ): Promise<[bigint, boolean]> {
     const inprog = await this.inprogressService.get(roomName);
     if (!inprog) {
       Logger.debug('Checking the participants for roomId', roomName);
       const participantsCount = await this.getRoomParticipantsCount(roomName);
       if (participantsCount === 0) {
-        const msgId = this.openChat.sendVideoCallStartedMessage(userId, chatId);
+        const msgId = this.openChat.sendVideoCallStartedMessage(
+          chatId,
+          initiatorId,
+          initiatorUsername,
+          initiatorDisplayname,
+          initiatorAvatarId,
+        );
         return [msgId, false];
       }
     } else {
@@ -215,8 +224,10 @@ export class AppService {
   }
 
   async getAccessToken(
-    username: string,
     authToken: string,
+    initiatorUsername: string,
+    initiatorDisplayName?: string,
+    initiatorAvatarId?: bigint,
   ): Promise<AccessTokenResponse> {
     try {
       const decoded = this.decodeJwt(authToken);
@@ -230,8 +241,11 @@ export class AppService {
 
       const [messageId, joining] = await this.sendStartMessageToOpenChat(
         roomName,
-        decoded.userId,
         decoded.chatId,
+        decoded.userId,
+        initiatorUsername,
+        initiatorDisplayName,
+        initiatorAvatarId,
       );
       if (!joining) {
         this.inprogressService.upsert({
@@ -244,7 +258,7 @@ export class AppService {
       const token = await this.getMeetingToken(
         roomName,
         decoded.userId,
-        username,
+        initiatorUsername,
       );
 
       return {

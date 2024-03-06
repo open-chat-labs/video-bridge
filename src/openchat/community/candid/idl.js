@@ -1260,7 +1260,7 @@ export const idlFactory = ({ IDL }) => {
   });
   const JoinVideoCallArgs = IDL.Record({
     'channel_id' : ChannelId,
-    'message_index' : MessageIndex,
+    'message_id' : MessageId,
   });
   const JoinVideoCallResponse = IDL.Variant({
     'AlreadyEnded' : IDL.Null,
@@ -1629,13 +1629,15 @@ export const idlFactory = ({ IDL }) => {
     'DisplayNameTooShort' : IDL.Nat16,
   });
   const StartVideoCallArgs = IDL.Record({
+    'initiator_username' : IDL.Text,
     'channel_id' : ChannelId,
     'initiator' : UserId,
+    'initiator_display_name' : IDL.Opt(IDL.Text),
     'message_id' : MessageId,
   });
   const StartVideoCallResponse = IDL.Variant({
     'NotAuthorized' : IDL.Null,
-    'Success' : SendMessageSuccess,
+    'Success' : IDL.Null,
   });
   const SummaryArgs = IDL.Record({ 'invite_code' : IDL.Opt(IDL.Nat64) });
   const CommunityPermissionRole = IDL.Variant({

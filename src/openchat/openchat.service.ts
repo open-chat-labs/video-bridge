@@ -16,7 +16,13 @@ export class OpenChatService {
     this._identity = this.createIdentity();
   }
 
-  sendVideoCallStartedMessage(userId: string, chatId: ChatIdentifier): bigint {
+  sendVideoCallStartedMessage(
+    chatId: ChatIdentifier,
+    initiatorId: string,
+    initiatorUsername: string,
+    initiatorDisplayname?: string,
+    initiatorAvatarId?: bigint,
+  ): bigint {
     Logger.debug('Sending a video chat started message to OpenChat', chatId);
     const msgId = newMessageId();
 
@@ -27,16 +33,29 @@ export class OpenChatService {
         communityClient.sendVideoCallStartedMessage(
           msgId,
           chatId.channelId,
-          userId,
+          initiatorId,
+          initiatorUsername,
+          initiatorDisplayname,
         );
         break;
       case 'group_chat':
         const groupClient = this.getGroupClient(chatId.groupId);
-        groupClient.sendVideoCallStartedMessage(msgId, userId);
+        groupClient.sendVideoCallStartedMessage(
+          msgId,
+          initiatorId,
+          initiatorUsername,
+          initiatorDisplayname,
+        );
         break;
       case 'direct_chat':
         const otherUserClient = this.getUserClient(chatId.userId);
-        otherUserClient.sendVideoCallStartedMessage(msgId, userId);
+        otherUserClient.sendVideoCallStartedMessage(
+          msgId,
+          initiatorId,
+          initiatorUsername,
+          initiatorDisplayname,
+          initiatorAvatarId,
+        );
         break;
       default:
         throw new Error('not implemented');

@@ -21,11 +21,20 @@ export class GroupClient extends CandidService {
     );
   }
 
-  sendVideoCallStartedMessage(msgId: bigint, userId: string): Promise<bigint> {
+  sendVideoCallStartedMessage(
+    msgId: bigint,
+    initiatorId: string,
+    initiatorUsername: string,
+    initiatorDisplayName?: string,
+  ): Promise<bigint> {
     return this.handleResponse(
       this.groupService.start_video_call({
         message_id: msgId,
-        initiator: Principal.fromText(userId),
+        initiator: Principal.fromText(initiatorId),
+        initiator_username: initiatorUsername,
+        initiator_display_name: initiatorDisplayName
+          ? [initiatorDisplayName]
+          : [],
       }),
       (res) => {
         if ('Success' in res) {

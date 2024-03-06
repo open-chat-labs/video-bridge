@@ -1052,7 +1052,7 @@ export type InvalidPollReason = { 'DuplicateOptions' : null } |
 export type InviteCodeArgs = {};
 export type InviteCodeResponse = { 'NotAuthorized' : null } |
   { 'Success' : { 'code' : [] | [bigint] } };
-export interface JoinVideoCallArgs { 'message_index' : MessageIndex }
+export interface JoinVideoCallArgs { 'message_id' : MessageId }
 export type JoinVideoCallResponse = { 'GroupFrozen' : null } |
   { 'AlreadyEnded' : null } |
   { 'UserNotInGroup' : null } |
@@ -1695,11 +1695,13 @@ export interface SnsProposal {
   'minimum_yes_proportion_of_exercised' : number,
 }
 export interface StartVideoCallArgs {
+  'initiator_username' : string,
   'initiator' : UserId,
+  'initiator_display_name' : [] | [string],
   'message_id' : MessageId,
 }
 export type StartVideoCallResponse = { 'NotAuthorized' : null } |
-  { 'Success' : SendMessageSuccess };
+  { 'Success' : null };
 export type Subaccount = Uint8Array | number[];
 export interface Subscription {
   'value' : SubscriptionInfo,

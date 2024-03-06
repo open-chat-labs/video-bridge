@@ -1162,7 +1162,7 @@ export type InvalidPollReason = { 'DuplicateOptions' : null } |
   { 'PollsNotValidForDirectChats' : null };
 export interface JoinVideoCallArgs {
   'user_id' : UserId,
-  'message_index' : MessageIndex,
+  'message_id' : MessageId,
 }
 export type JoinVideoCallResponse = { 'AlreadyEnded' : null } |
   { 'MessageNotFound' : null } |
@@ -1918,11 +1918,14 @@ export interface SnsProposal {
   'minimum_yes_proportion_of_exercised' : number,
 }
 export interface StartVideoCallArgs {
+  'initiator_username' : string,
   'initiator' : UserId,
+  'initiator_avatar_id' : [] | [bigint],
+  'initiator_display_name' : [] | [string],
   'message_id' : MessageId,
 }
 export type StartVideoCallResponse = { 'NotAuthorized' : null } |
-  { 'Success' : SendMessageSuccess };
+  { 'Success' : null };
 export type Subaccount = Uint8Array | number[];
 export interface SubmitProposalArgs {
   'token' : Cryptocurrency,

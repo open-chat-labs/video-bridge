@@ -33,14 +33,27 @@ export class AppController {
   @Get('meeting_access_token')
   getAccessToken(
     @Headers('x-auth-jwt') auth: string | undefined,
-    @Query('username') username: string,
+    @Query('initiator-username') initiatorUsername: string,
+    @Query('initiator-displayname') initiatorDisplayname: string,
+    @Query('initiator-avatarid') initiatorAvatarId: bigint,
   ): Promise<AccessTokenResponse> {
     if (auth === undefined) {
       throw new UnauthorizedException(
         'You must provide an OpenChat authorisation jwt to show that you are permitted to access the room',
       );
     }
-    return this.appService.getAccessToken(username, auth);
+    Logger.debug(
+      'Input params: ',
+      initiatorUsername,
+      initiatorDisplayname,
+      initiatorAvatarId,
+    );
+    return this.appService.getAccessToken(
+      auth,
+      initiatorUsername,
+      initiatorDisplayname,
+      initiatorAvatarId,
+    );
   }
 
   /** Verify the event signature so we are sure it came from daily */
