@@ -35,7 +35,7 @@ export class AppController {
     @Headers('x-auth-jwt') auth: string | undefined,
     @Query('initiator-username') initiatorUsername: string,
     @Query('initiator-displayname') initiatorDisplayname: string,
-    @Query('initiator-avatarid') initiatorAvatarId: bigint,
+    @Query('initiator-avatarid') initiatorAvatarId?: bigint,
   ): Promise<AccessTokenResponse> {
     if (auth === undefined) {
       throw new UnauthorizedException(
@@ -52,7 +52,7 @@ export class AppController {
       auth,
       initiatorUsername,
       initiatorDisplayname,
-      initiatorAvatarId,
+      initiatorAvatarId ? BigInt(initiatorAvatarId) : undefined,
     );
   }
 
