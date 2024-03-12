@@ -124,56 +124,42 @@ export function channelIdToRoomName({
   return `C${canisterIdToBase64(communityId)}${channelIdToBase64(channelId)}`;
 }
 
-export function roomNameToMeetings(
+export function roomNameToMeeting(
   roomName: string,
   messageId: string,
-): Meeting[] {
+): Meeting {
   if (roomName.startsWith('G')) {
-    return [
-      {
-        kind: 'group_meeting',
-        roomName,
-        messageId: BigInt(messageId),
-        chatId: {
-          kind: 'group_chat',
-          groupId: base64ToCanisterId(roomName.slice(1)),
-        },
+    return {
+      kind: 'group_meeting',
+      roomName,
+      messageId: BigInt(messageId),
+      chatId: {
+        kind: 'group_chat',
+        groupId: base64ToCanisterId(roomName.slice(1)),
       },
-    ];
+    };
   } else if (roomName.startsWith('D')) {
     const userA = roomName.slice(1, 15);
     const userB = roomName.slice(15);
-    return [
-      {
-        kind: 'direct_meeting',
-        roomName,
-        messageId: BigInt(messageId),
-        userA: userA,
-        userB: userB,
-      },
-      {
-        kind: 'direct_meeting',
-        roomName,
-        messageId: BigInt(messageId),
-        userA: userB,
-        userB: userA,
-      },
-    ];
+    return {
+      kind: 'direct_meeting',
+      roomName,
+      messageId: BigInt(messageId),
+      userA: userA,
+      userB: userB,
+    };
   } else if (roomName.startsWith('C')) {
     const communityId = roomName.slice(1, 15);
     const channelId = roomName.slice(15);
-    return [
-      {
-        kind: 'channel_meeting',
-        roomName,
-        messageId: BigInt(messageId),
-        chatId: {
-          kind: 'channel',
-          communityId: base64ToCanisterId(communityId),
-          channelId: base64ToChannelId(channelId),
-        },
+    return {
+      kind: 'channel_meeting',
+      roomName,
+      messageId: BigInt(messageId),
+      chatId: {
+        kind: 'channel',
+        communityId: base64ToCanisterId(communityId),
+        channelId: base64ToChannelId(channelId),
       },
-    ];
+    };
   }
-  return [];
 }

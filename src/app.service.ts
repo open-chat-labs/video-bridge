@@ -18,7 +18,7 @@ import { ConfigService } from '@nestjs/config';
 import { DailyRoomInfo } from '@daily-co/daily-js';
 import { Interval } from '@nestjs/schedule';
 import { OpenChatService } from './openchat/openchat.service';
-import { chatIdToRoomName, roomNameToMeetings } from './utils';
+import { chatIdToRoomName, roomNameToMeeting } from './utils';
 import { InProgressService } from './inprogress/inprogress.service';
 import { InProgress } from './inprogress/inprogress.schema';
 
@@ -199,8 +199,8 @@ export class AppService {
     return chatIdToRoomName(userId, chatId);
   }
 
-  private roomNameToMeetings(roomId: string, messageId: string): Meeting[] {
-    return roomNameToMeetings(roomId, messageId);
+  private roomNameToMeeting(roomId: string, messageId: string): Meeting {
+    return roomNameToMeeting(roomId, messageId);
   }
 
   private decodeJwt(token: string): TokenPayload {
@@ -339,7 +339,7 @@ export class AppService {
       const finishedMeetings = [...inProgress].reduce(
         (finished, [roomName, { confirmed, messageId }]) => {
           if (!occupiedRoomsNames.has(roomName) && confirmed) {
-            finished.push(...this.roomNameToMeetings(roomName, messageId));
+            finished.push(this.roomNameToMeeting(roomName, messageId));
           }
           return finished;
         },
@@ -357,9 +357,9 @@ export class AppService {
     const inProgressList = await this.inprogressService.getAll();
     const meeting = inProgressList.find((p) => p.roomName === payload.room);
     if (meeting !== undefined) {
-      this.processFinishedMeetings(
-        this.roomNameToMeetings(meeting.roomName, meeting.messageId),
-      );
+      this.processFinishedMeetings([
+        this.roomNameToMeeting(meeting.roomName, meeting.messageId),
+      ]);
     }
   }
 

@@ -66,21 +66,35 @@ export class OpenChatService {
   async meetingsFinished(meetings: Meeting[]): Promise<Meeting[]> {
     Logger.debug('Sending meeting finished messages to OpenChat: ', meetings);
 
-    const results = await waitAll<Meeting>(
-      meetings.map((meeting) => {
-        if (meeting.kind === 'channel_meeting') {
-          return this.getCommunityClient(
-            meeting.chatId.communityId,
-          ).meetingFinished(meeting);
-        } else if (meeting.kind === 'direct_meeting') {
-          return this.getUserClient(meeting.userA).meetingFinished(meeting);
-        } else if (meeting.kind === 'group_meeting') {
-          return this.getGroupClient(meeting.chatId.groupId).meetingFinished(
+    const promises = meetings.reduce<Promise<Meeting>[]>((all, meeting) => {
+      if (meeting.kind === 'channel_meeting') {
+        all.push(
+          this.getCommunityClient(meeting.chatId.communityId).meetingFinished(
             meeting,
-          );
-        }
-      }),
-    );
+          ),
+        );
+      } else if (meeting.kind === 'direct_meeting') {
+        all.push(
+          this.getUserClient(meeting.userA).meetingFinished(
+            meeting.userB,
+            meeting,
+          ),
+        );
+        all.push(
+          this.getUserClient(meeting.userB).meetingFinished(
+            meeting.userA,
+            meeting,
+          ),
+        );
+      } else if (meeting.kind === 'group_meeting') {
+        all.push(
+          this.getGroupClient(meeting.chatId.groupId).meetingFinished(meeting),
+        );
+      }
+      return all;
+    }, []);
+
+    const results = await waitAll<Meeting>(promises);
 
     Logger.debug('Meetings successfully finished: ', results.success);
     if (results.errors.length > 0) {
