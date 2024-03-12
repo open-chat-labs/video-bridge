@@ -73,9 +73,7 @@ export class OpenChatService {
             meeting.chatId.communityId,
           ).meetingFinished(meeting);
         } else if (meeting.kind === 'direct_meeting') {
-          return this.getUserClient(meeting.chatId.userId).meetingFinished(
-            meeting,
-          );
+          return this.getUserClient(meeting.userA).meetingFinished(meeting);
         } else if (meeting.kind === 'group_meeting') {
           return this.getGroupClient(meeting.chatId.groupId).meetingFinished(
             meeting,

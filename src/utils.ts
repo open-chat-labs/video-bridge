@@ -4,6 +4,7 @@ import {
   ChatIdentifier,
   DirectChatIdentifier,
   GroupChatIdentifier,
+  Meeting,
 } from './types';
 import { toBigIntBE, toBufferBE } from 'bigint-buffer';
 import { v1 as uuidv1 } from 'uuid';
@@ -123,12 +124,20 @@ export function channelIdToRoomName({
   return `C${canisterIdToBase64(communityId)}${channelIdToBase64(channelId)}`;
 }
 
-export function roomNameToChatIds(roomName: string): ChatIdentifier[] {
+export function roomNameToMeetings(
+  roomName: string,
+  messageId: string,
+): Meeting[] {
   if (roomName.startsWith('G')) {
     return [
       {
-        kind: 'group_chat',
-        groupId: base64ToCanisterId(roomName.slice(1)),
+        kind: 'group_meeting',
+        roomName,
+        messageId: BigInt(messageId),
+        chatId: {
+          kind: 'group_chat',
+          groupId: base64ToCanisterId(roomName.slice(1)),
+        },
       },
     ];
   } else if (roomName.startsWith('D')) {
@@ -136,12 +145,18 @@ export function roomNameToChatIds(roomName: string): ChatIdentifier[] {
     const userB = roomName.slice(15);
     return [
       {
-        kind: 'direct_chat',
-        userId: base64ToCanisterId(userA),
+        kind: 'direct_meeting',
+        roomName,
+        messageId: BigInt(messageId),
+        userA: userA,
+        userB: userB,
       },
       {
-        kind: 'direct_chat',
-        userId: base64ToCanisterId(userB),
+        kind: 'direct_meeting',
+        roomName,
+        messageId: BigInt(messageId),
+        userA: userB,
+        userB: userA,
       },
     ];
   } else if (roomName.startsWith('C')) {
@@ -149,17 +164,16 @@ export function roomNameToChatIds(roomName: string): ChatIdentifier[] {
     const channelId = roomName.slice(15);
     return [
       {
-        kind: 'channel',
-        communityId: base64ToCanisterId(communityId),
-        channelId: base64ToChannelId(channelId),
+        kind: 'channel_meeting',
+        roomName,
+        messageId: BigInt(messageId),
+        chatId: {
+          kind: 'channel',
+          communityId: base64ToCanisterId(communityId),
+          channelId: base64ToChannelId(channelId),
+        },
       },
     ];
   }
-
-  return [
-    {
-      kind: 'direct_chat',
-      userId: '',
-    },
-  ];
+  return [];
 }
