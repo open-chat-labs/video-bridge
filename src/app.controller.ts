@@ -35,19 +35,19 @@ export class AppController {
     @Headers('x-auth-jwt') auth: string | undefined,
     @Query('initiator-username') initiatorUsername: string,
     @Query('initiator-displayname') initiatorDisplayname: string,
-    @Query('initiator-avatarid') initiatorAvatarId?: bigint,
+    @Query('initiator-avatarid') initiatorAvatarId: string | undefined,
   ): Promise<AccessTokenResponse> {
     if (auth === undefined) {
       throw new UnauthorizedException(
         'You must provide an OpenChat authorisation jwt to show that you are permitted to access the room',
       );
     }
-    Logger.debug(
-      'Input params: ',
+    Logger.debug('Input params: ', [
       initiatorUsername,
       initiatorDisplayname,
       initiatorAvatarId,
-    );
+      initiatorAvatarId === undefined,
+    ]);
     return this.appService.getAccessToken(
       auth,
       initiatorUsername,

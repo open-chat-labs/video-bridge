@@ -50,11 +50,15 @@ export class UserClient extends CandidService {
     );
   }
 
-  meetingFinished(meeting: DirectMeeting): Promise<DirectMeeting> {
-    Logger.debug('Sending meeting finished for userId ', this.userId, meeting);
+  meetingFinished(
+    otherUser: string,
+    meeting: DirectMeeting,
+  ): Promise<DirectMeeting> {
+    const msg = `Sending meeting finished from userA (${this.userId}) to userB (${otherUser})`;
+    Logger.debug(msg);
     return this.handleResponse(
       this.userService.end_video_call({
-        user_id: Principal.fromText(this.userId),
+        user_id: Principal.fromText(otherUser),
         message_id: meeting.messageId,
       }),
       () => {

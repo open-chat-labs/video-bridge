@@ -12,14 +12,13 @@ import {
   Meeting,
   MeetingEndedEvent,
   TokenPayload,
-  createMeeting,
   mapTokenPayload,
 } from './types';
 import { ConfigService } from '@nestjs/config';
 import { DailyRoomInfo } from '@daily-co/daily-js';
 import { Interval } from '@nestjs/schedule';
 import { OpenChatService } from './openchat/openchat.service';
-import { chatIdToRoomName, roomNameToChatIds } from './utils';
+import { chatIdToRoomName, roomNameToMeeting } from './utils';
 import { InProgressService } from './inprogress/inprogress.service';
 import { InProgress } from './inprogress/inprogress.schema';
 
@@ -200,8 +199,8 @@ export class AppService {
     return chatIdToRoomName(userId, chatId);
   }
 
-  private roomNameToChatIds(roomId: string): ChatIdentifier[] {
-    return roomNameToChatIds(roomId);
+  private roomNameToMeeting(roomId: string, messageId: string): Meeting {
+    return roomNameToMeeting(roomId, messageId);
   }
 
   private decodeJwt(token: string): TokenPayload {
@@ -340,10 +339,7 @@ export class AppService {
       const finishedMeetings = [...inProgress].reduce(
         (finished, [roomName, { confirmed, messageId }]) => {
           if (!occupiedRoomsNames.has(roomName) && confirmed) {
-            const chatIds = this.roomNameToChatIds(roomName);
-            chatIds.forEach((chatId) =>
-              finished.push(createMeeting(chatId, roomName, messageId)),
-            );
+            finished.push(this.roomNameToMeeting(roomName, messageId));
           }
           return finished;
         },
@@ -361,11 +357,9 @@ export class AppService {
     const inProgressList = await this.inprogressService.getAll();
     const meeting = inProgressList.find((p) => p.roomName === payload.room);
     if (meeting !== undefined) {
-      const chatIds = this.roomNameToChatIds(meeting.roomName);
-      const finished = chatIds.map((chatId) =>
-        createMeeting(chatId, meeting.roomName, meeting.messageId),
-      );
-      this.processFinishedMeetings(finished);
+      this.processFinishedMeetings([
+        this.roomNameToMeeting(meeting.roomName, meeting.messageId),
+      ]);
     }
   }
 
