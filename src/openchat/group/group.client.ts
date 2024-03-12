@@ -37,12 +37,13 @@ export class GroupClient extends CandidService {
           : [],
       }),
       (res) => {
-        if ('Success' in res) {
-          return msgId;
-        } else {
-          Logger.error('Unable to send message to start video call: ', res);
-          throw new Error(`Unable to send message to start video call: ${res}`);
+        if (!('Success' in res)) {
+          Logger.error(
+            'Unable to send message to start video call: ',
+            JSON.stringify(res),
+          );
         }
+        return msgId;
       },
     );
   }
