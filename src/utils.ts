@@ -145,8 +145,8 @@ export function roomNameToMeeting(
       kind: 'direct_meeting',
       roomName,
       messageId: BigInt(messageId),
-      userA: userA,
-      userB: userB,
+      userA: base64ToCanisterId(userA),
+      userB: base64ToCanisterId(userB),
     };
   } else if (roomName.startsWith('C')) {
     const communityId = roomName.slice(1, 15);
