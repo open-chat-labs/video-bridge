@@ -7,7 +7,6 @@ describe('validation of hook payload', () => {
     const errors = await validate(
       plainToClass(MeetingEndedEvent, { test: 'test' }),
     );
-    console.log(errors);
     expect(errors.length).toBeGreaterThan(0);
   });
 });
