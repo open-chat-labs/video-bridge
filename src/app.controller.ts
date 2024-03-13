@@ -13,6 +13,7 @@ import { AppService } from './app.service';
 import { AccessTokenResponse, MeetingEndedEvent } from './types';
 import { ConfigService } from '@nestjs/config';
 import * as crypto from 'crypto';
+import { validate } from 'class-validator';
 
 @Controller('room')
 export class AppController {
@@ -62,25 +63,44 @@ export class AppController {
     signatureHeader: string,
     body: MeetingEndedEvent,
   ): boolean {
-    const secret = this.configService.get<string>('DAILY_HOOK_HMAC');
-    const signature = timestamp + '.' + JSON.stringify(body);
-    const base64DecodedSecret = Buffer.from(secret, 'base64');
-    const hmac = crypto.createHmac('sha256', base64DecodedSecret);
-    const computed = hmac.update(signature).digest('base64');
-    return computed === signatureHeader;
+    try {
+      const secret = this.configService.get<string>('DAILY_HOOK_HMAC');
+      const signature = timestamp + '.' + JSON.stringify(body);
+      const base64DecodedSecret = Buffer.from(secret, 'base64');
+      const hmac = crypto.createHmac('sha256', base64DecodedSecret);
+      const computed = hmac.update(signature).digest('base64');
+      return computed === signatureHeader;
+    } catch (err) {
+      Logger.error(
+        'There was an error trying to verify the daily hook signature: ',
+        err,
+      );
+      return false;
+    }
   }
 
   @Post('hook')
   @HttpCode(200)
-  meetingEndedEvent(
+  async meetingEndedEvent(
     @Headers('X-Webhook-Timestamp') timestamp: string,
     @Headers('X-Webhook-Signature') signature: string,
     @Body() payload: MeetingEndedEvent,
   ) {
     if (this.isValid(timestamp, signature, payload)) {
-      this.appService.meetingEndedEvent(payload);
+      // When we reactivate a hook (after failure) we get a test message that looks like { "test": "test" }
+      const errors = await validate(payload);
+      if (errors.length > 0) {
+        Logger.warn(
+          `Daily event received that does not conform to the expected type: ${errors}`,
+        );
+      } else {
+        // we deliberately don't wait for this to run because we want the hook to be handled fast
+        this.appService.meetingEndedEvent(payload).catch((err) => {
+          Logger.error('Error process meeting.ended hook: ', err);
+        });
+      }
     } else {
-      Logger.error('Hook received from daily js does not pass validation');
+      Logger.error('Hook received from daily js cannot be verified');
     }
   }
 }

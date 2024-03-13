@@ -46,11 +46,13 @@ export class AppService {
   }
 
   private getRoomParams(chatId: string): unknown {
+    const now = Math.floor(Date.now() / 1000);
     return {
       name: chatId,
       privacy: 'private',
       properties: {
-        nbf: Date.now() / 1000,
+        nbf: now,
+        exp: now + 60 * 60,
         enable_people_ui: true,
         enable_pip_ui: true,
         enable_emoji_reactions: false,
@@ -62,7 +64,6 @@ export class AppService {
         enable_knocking: false,
         enable_screenshare: true,
         eject_at_room_exp: true,
-        eject_after_elapsed: 60 * 60,
         max_participants: 20,
         permissions: {
           hasPresence: true,
@@ -73,13 +74,27 @@ export class AppService {
     };
   }
 
-  private createRoom(roomId: string): Promise<DailyRoomInfo> {
+  private deleteRoom(roomName: string): Promise<boolean> {
+    Logger.debug(`Attempting to delete room: ${roomName}`);
+    const headers = this.getAuthHeaders();
+    headers.append('Content-Type', 'application/json');
+    const init = {
+      method: 'DELETE',
+      headers,
+    };
+    Logger.debug('Attempting to delete a room with: ', init);
+    return fetch(`https://api.daily.co/v1/rooms/${roomName}`, init).then(
+      (res) => res.ok,
+    );
+  }
+
+  private createRoom(roomName: string): Promise<DailyRoomInfo> {
     const headers = this.getAuthHeaders();
     headers.append('Content-Type', 'application/json');
     const init = {
       method: 'POST',
       headers,
-      body: JSON.stringify(this.getRoomParams(roomId)),
+      body: JSON.stringify(this.getRoomParams(roomName)),
     };
     Logger.debug('Attempting to create a room with: ', init);
     return fetch(`https://api.daily.co/v1/rooms`, init).then((res) => {
@@ -90,7 +105,7 @@ export class AppService {
           Logger.error('Error creating room: ', err);
         });
 
-        const err = `Unable to create daily room for chat: ${roomId}. Status: ${res.status} - ${res.statusText}`;
+        const err = `Unable to create daily room for chat: ${roomName}. Status: ${res.status} - ${res.statusText}`;
         Logger.error(err);
         throw new InternalServerErrorException(err);
       }
@@ -380,8 +395,9 @@ export class AppService {
       this.openChat.meetingsFinished(finishedMeetings).then((finished) => {
         Logger.debug('Successfully finished: ', finished);
         // all the meetings that we successfully marked finished need to be removed from the db
-        finished.forEach((meeting) => {
-          this.inprogressService.delete(meeting.roomName);
+        finished.forEach(async (meeting) => {
+          await this.deleteRoom(meeting.roomName);
+          await this.inprogressService.delete(meeting.roomName);
         });
       });
     }

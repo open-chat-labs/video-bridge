@@ -1,3 +1,5 @@
+import { IsNotEmpty, IsObject } from 'class-validator';
+
 export type ApiTokenPayload = {
   claim_type: 'StartVideoCall' | 'JoinVideoCall';
   user_id: string;
@@ -112,11 +114,14 @@ export class MeetingEndedEvent {
   version: string;
   type: 'meeting.ended';
   id: string;
+  event_ts: number;
+
+  @IsObject()
+  @IsNotEmpty()
   payload: {
     start_ts: number;
     end_ts: number;
     meeting_id: string;
     room: string;
   };
-  event_ts: number;
 }
