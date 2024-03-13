@@ -64,7 +64,6 @@ export class AppService {
         enable_knocking: false,
         enable_screenshare: true,
         eject_at_room_exp: true,
-        // eject_after_elapsed: 60 * 60,
         max_participants: 20,
         permissions: {
           hasPresence: true,
