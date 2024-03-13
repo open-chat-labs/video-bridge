@@ -21,6 +21,7 @@ import { OpenChatService } from './openchat/openchat.service';
 import { chatIdToRoomName, roomNameToMeeting } from './utils';
 import { InProgressService } from './inprogress/inprogress.service';
 import { InProgress } from './inprogress/inprogress.schema';
+import { NoMeetingInProgress } from './openchat/error';
 
 @Injectable()
 export class AppService {
@@ -170,6 +171,7 @@ export class AppService {
 
   private async sendStartMessageToOpenChat(
     roomName: string,
+    joining: boolean,
     chatId: ChatIdentifier,
     initiatorId: string,
     initiatorUsername: string,
@@ -177,10 +179,18 @@ export class AppService {
     initiatorAvatarId?: bigint,
   ): Promise<[bigint, boolean]> {
     const inprog = await this.inprogressService.get(roomName);
-    if (!inprog) {
-      Logger.debug('Checking the participants for roomId', roomName);
-      const participantsCount = await this.getRoomParticipantsCount(roomName);
-      if (participantsCount === 0) {
+    if (inprog) {
+      Logger.debug(
+        `Call in progress for room ${roomName} so we will be joining`,
+      );
+      return [BigInt(inprog.messageId), true];
+    } else {
+      if (joining) {
+        Logger.debug(
+          `Trying to join when there is no meeting in progress for room ${roomName}`,
+        );
+        throw new NoMeetingInProgress(roomName);
+      } else {
         const msgId = this.openChat.sendVideoCallStartedMessage(
           chatId,
           initiatorId,
@@ -190,8 +200,6 @@ export class AppService {
         );
         return [msgId, false];
       }
-    } else {
-      return [BigInt(inprog.messageId), true];
     }
   }
 
@@ -240,6 +248,7 @@ export class AppService {
 
       const [messageId, joining] = await this.sendStartMessageToOpenChat(
         roomName,
+        decoded.claimType === 'JoinVideoCall',
         decoded.chatId,
         decoded.userId,
         initiatorUsername,
@@ -267,6 +276,9 @@ export class AppService {
         joining,
       };
     } catch (err) {
+      if (err instanceof NoMeetingInProgress) {
+        throw err;
+      }
       throw new UnauthorizedException('Error obtaining room access token', err);
     }
   }

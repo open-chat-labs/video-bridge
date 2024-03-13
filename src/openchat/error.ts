@@ -1,3 +1,5 @@
+import { BadRequestException } from '@nestjs/common';
+
 export class HttpError extends Error {
   constructor(
     public code: number,
@@ -6,6 +8,12 @@ export class HttpError extends Error {
     super(error.message);
     this.stack = error.stack;
     this.name = 'HttpError';
+  }
+}
+
+export class NoMeetingInProgress extends BadRequestException {
+  constructor(roomName: string) {
+    super(`No meeting in progress for room ${roomName}, unable to join`);
   }
 }
 
