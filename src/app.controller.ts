@@ -14,6 +14,7 @@ import { AccessTokenResponse, MeetingEndedEvent } from './types';
 import { ConfigService } from '@nestjs/config';
 import * as crypto from 'crypto';
 import { validate } from 'class-validator';
+import { plainToClass } from 'class-transformer';
 
 @Controller('room')
 export class AppController {
@@ -88,7 +89,7 @@ export class AppController {
   ) {
     if (this.isValid(timestamp, signature, payload)) {
       // When we reactivate a hook (after failure) we get a test message that looks like { "test": "test" }
-      const errors = await validate(payload);
+      const errors = await validate(plainToClass(MeetingEndedEvent, payload));
       if (errors.length > 0) {
         Logger.warn(
           `Daily event received that does not conform to the expected type: ${errors}`,

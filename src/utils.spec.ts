@@ -9,7 +9,7 @@ import {
   canisterIdToBase64,
   channelIdToBase64,
   chatIdToRoomName,
-  roomNameToChatIds,
+  roomNameToMeeting,
 } from './utils';
 
 const requestingUserId = 'dfdal-2uaaa-aaaaa-qaama-cai';
@@ -37,9 +37,17 @@ describe('create room name from chat identifier', () => {
 
     test('roundtrip a channel identifier', () => {
       const roomName = chatIdToRoomName(requestingUserId, channelId);
-      const chatIds = roomNameToChatIds(roomName);
-      expect(chatIds.length).toEqual(1);
-      expect(chatIds[0]).toMatchObject(channelId);
+      const meeting = roomNameToMeeting(roomName, '123');
+      expect(meeting).toMatchObject({
+        kind: 'channel_meeting',
+        roomName: 'CgAAAAAAQABcBAQ1YMmXxLOH4FT_VUHapr0mw',
+        messageId: 123n,
+        chatId: {
+          kind: 'channel',
+          communityId: 'cinef-v4aaa-aaaaa-qaalq-cai',
+          channelId: '283806532254715438641103320620325336219',
+        },
+      });
     });
   });
 
@@ -51,12 +59,13 @@ describe('create room name from chat identifier', () => {
 
     test('roundtrip a direct identifier', () => {
       const roomName = chatIdToRoomName(requestingUserId, directId);
-      const chatIds = roomNameToChatIds(roomName);
-      expect(chatIds.length).toEqual(2);
-      expect(chatIds[0]).toMatchObject(directId);
-      expect(chatIds[1]).toMatchObject({
-        kind: 'direct_chat',
-        userId: requestingUserId,
+      const meeting = roomNameToMeeting(roomName, '123');
+      expect(meeting).toMatchObject({
+        kind: 'direct_meeting',
+        roomName: 'DgAAAAAAQABkBAQgAAAAAAQABgBAQ',
+        messageId: 123n,
+        userA: 'dccg7-xmaaa-aaaaa-qaamq-cai',
+        userB: 'dfdal-2uaaa-aaaaa-qaama-cai',
       });
     });
   });
@@ -69,9 +78,13 @@ describe('create room name from chat identifier', () => {
 
     test('roundtrip a group identifier', () => {
       const roomName = chatIdToRoomName(requestingUserId, groupId);
-      const chatIds = roomNameToChatIds(roomName);
-      expect(chatIds.length).toEqual(1);
-      expect(chatIds[0]).toMatchObject(groupId);
+      const meeting = roomNameToMeeting(roomName, '123');
+      expect(meeting).toMatchObject({
+        kind: 'group_meeting',
+        roomName: 'GgAAAAAAQABYBAQ',
+        messageId: 123n,
+        chatId: { kind: 'group_chat', groupId: 'cpmcr-yeaaa-aaaaa-qaala-cai' },
+      });
     });
   });
 });
