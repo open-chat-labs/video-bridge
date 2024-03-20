@@ -128,13 +128,9 @@ export class OpenChatService {
   }
 
   private createIdentity() {
-    const privateKey = this.configService.get('OC_IDENTITY');
+    const privateKeyPem = this.configService.get('OC_IDENTITY');
     try {
-      const buf = Buffer.from(privateKey, 'base64');
-      if (buf.length != 118) {
-        throw 'expecting byte length 118 but got ' + buf.length;
-      }
-      return Secp256k1KeyIdentity.fromSecretKey(buf.subarray(7, 39));
+      return Secp256k1KeyIdentity.fromPem(privateKeyPem);
     } catch (err) {
       Logger.error(err);
     }
