@@ -125,3 +125,8 @@ export class MeetingEndedEvent {
     room: string;
   };
 }
+
+export type HuddleRoomInfo = {
+  roomId: string;
+  meetingLink: string;
+};

@@ -9,18 +9,18 @@ import {
   Query,
   UnauthorizedException,
 } from '@nestjs/common';
-import { AppService } from './app.service';
-import { AccessTokenResponse, MeetingEndedEvent } from './types';
+import { DailyService } from './daily.service';
+import { AccessTokenResponse, MeetingEndedEvent } from '../types';
 import { ConfigService } from '@nestjs/config';
 import * as crypto from 'crypto';
 import { validate } from 'class-validator';
 import { plainToClass } from 'class-transformer';
 
 @Controller('room')
-export class AppController {
+export class DailyController {
   constructor(
     private configService: ConfigService,
-    private readonly appService: AppService,
+    private readonly dailyService: DailyService,
   ) {}
 
   /**
@@ -29,7 +29,7 @@ export class AppController {
    */
   @Get('meetings')
   getMeetings() {
-    return this.appService.getMeetings();
+    return this.dailyService.getMeetings();
   }
 
   @Get('meeting_access_token')
@@ -50,7 +50,7 @@ export class AppController {
       initiatorAvatarId,
       initiatorAvatarId === undefined,
     ]);
-    return this.appService.getAccessToken(
+    return this.dailyService.getAccessToken(
       auth,
       initiatorUsername,
       initiatorDisplayname,
@@ -96,7 +96,7 @@ export class AppController {
         );
       } else {
         // we deliberately don't wait for this to run because we want the hook to be handled fast
-        this.appService.meetingEndedEvent(payload).catch((err) => {
+        this.dailyService.meetingEndedEvent(payload).catch((err) => {
           Logger.error('Error process meeting.ended hook: ', err);
         });
       }

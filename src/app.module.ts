@@ -1,12 +1,15 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { AppController } from './app.controller';
-import { AppService } from './app.service';
+import { DailyController } from './daily/daily.controller';
+import { DailyService } from './daily/daily.service';
 import { ScheduleModule } from '@nestjs/schedule';
 import { OpenChatService } from './openchat/openchat.service';
 import { HttpModule } from '@nestjs/axios';
 import { MongooseModule } from '@nestjs/mongoose';
 import { InProgressModule } from './inprogress/inprogress.module';
+import { HuddleController } from './huddle/huddle.controller';
+import { HuddleService } from './huddle/huddle.service';
+import { RoomMapModule } from './roommap/roommap.module';
 
 @Module({
   imports: [
@@ -22,8 +25,9 @@ import { InProgressModule } from './inprogress/inprogress.module';
     ScheduleModule.forRoot(),
     HttpModule,
     InProgressModule,
+    RoomMapModule,
   ],
-  controllers: [AppController],
-  providers: [AppService, OpenChatService],
+  controllers: [DailyController, HuddleController],
+  providers: [DailyService, HuddleService, OpenChatService],
 })
 export class AppModule {}

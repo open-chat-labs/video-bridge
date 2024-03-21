@@ -13,18 +13,18 @@ import {
   MeetingEndedEvent,
   TokenPayload,
   mapTokenPayload,
-} from './types';
+} from '../types';
 import { ConfigService } from '@nestjs/config';
 import { DailyRoomInfo } from '@daily-co/daily-js';
 import { Interval } from '@nestjs/schedule';
-import { OpenChatService } from './openchat/openchat.service';
-import { chatIdToRoomName, roomNameToMeeting } from './utils';
-import { InProgressService } from './inprogress/inprogress.service';
-import { InProgress } from './inprogress/inprogress.schema';
-import { NoMeetingInProgress } from './openchat/error';
+import { OpenChatService } from '../openchat/openchat.service';
+import { chatIdToRoomName, roomNameToMeeting } from '../utils';
+import { InProgressService } from '../inprogress/inprogress.service';
+import { InProgress } from '../inprogress/inprogress.schema';
+import { NoMeetingInProgress } from '../openchat/error';
 
 @Injectable()
-export class AppService {
+export class DailyService {
   constructor(
     private inprogressService: InProgressService,
     private configService: ConfigService,
