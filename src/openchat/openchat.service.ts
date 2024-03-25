@@ -128,7 +128,8 @@ export class OpenChatService {
   }
 
   private createIdentity() {
-    const privateKeyPem = this.configService.get('OC_IDENTITY');
+    const rawPem = this.configService.get('OC_IDENTITY');
+    const privateKeyPem = rawPem.replace(/\\n/g, '\n');
     try {
       return Secp256k1KeyIdentity.fromPem(privateKeyPem);
     } catch (err) {

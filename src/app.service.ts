@@ -275,6 +275,7 @@ export class AppService {
           roomName,
           messageId: messageId.toString(),
           confirmed: false,
+          expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 2), // expire this record in two hours just in case the meeting never starts
         });
       }
       Logger.debug('Meeting start messageId ', messageId);

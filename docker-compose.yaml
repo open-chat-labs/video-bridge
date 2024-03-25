@@ -51,7 +51,13 @@ services:
       - 27017:27017
     networks:
       - video_bridge_network
+    volumes:
+      - mongodb_data:/data/db
 
 networks:
   video_bridge_network:
     driver: bridge
+
+volumes:
+  mongodb_data:
+    driver: local
