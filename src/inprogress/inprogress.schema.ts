@@ -5,6 +5,9 @@ export type InProgressDocument = HydratedDocument<InProgress>;
 
 @Schema()
 export class InProgress {
+  @Prop({ type: Date, expires: 0 })
+  expiresAt?: Date;
+
   @Prop()
   roomName: string;
 
@@ -15,4 +18,7 @@ export class InProgress {
   confirmed: boolean;
 }
 
-export const InProgressSchema = SchemaFactory.createForClass(InProgress);
+export const InProgressSchema = SchemaFactory.createForClass(InProgress).index(
+  { expiresAt: 1 },
+  { expireAfterSeconds: 0 },
+);
