@@ -24,8 +24,13 @@ export class RoomMapService {
     return this.roomMapModel.find();
   }
 
-  get(roomName: string): Promise<RoomMap | undefined> {
-    return this.roomMapModel.findOne({ _id: roomName }).exec();
+  // TODO this might be slow - we might need an index on roomId
+  getMany(roomIds: Set<string>): Promise<RoomMap[]> {
+    return this.roomMapModel.find({ roomId: { $in: [...roomIds] } });
+  }
+
+  get(roomName: string): Promise<RoomMap | null> {
+    return this.roomMapModel.findById(roomName).exec();
   }
 
   async delete(roomName: string): Promise<boolean> {

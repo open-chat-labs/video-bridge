@@ -9,6 +9,7 @@ import {
   AccessTokenResponse,
   ApiTokenPayload,
   ChatIdentifier,
+  HuddleLiveMeetingsResponse,
   HuddleRoomInfo,
   Meeting,
   MeetingEndedEvent,
@@ -42,9 +43,9 @@ export class HuddleService {
   }
 
   private roomExists(
-    roomMap: RoomMap | undefined,
+    roomMap: RoomMap | null,
   ): Promise<HuddleRoomInfo | undefined> {
-    if (roomMap === undefined) return Promise.resolve(undefined);
+    if (!roomMap) return Promise.resolve(undefined);
 
     return fetch(
       `https://api.huddle01.com/api/v1/room-details/${roomMap.roomId}`,
@@ -224,12 +225,16 @@ export class HuddleService {
   ): Promise<AccessTokenResponse> {
     try {
       const decoded = this.decodeJwt(authToken);
+      Logger.debug(`DecodedJWT: ${decoded}`);
       const roomName = this.chatIdToRoomName(decoded.userId, decoded.chatId);
+      Logger.debug(`RoomName: ${roomName}`);
       const roomMap = await this.roomMapService.get(roomName);
+      Logger.debug(`RoomMap: ${roomMap}`);
 
       let room = await this.roomExists(roomMap);
       if (room === undefined) {
         room = await this.createRoom(roomName);
+        await this.roomMapService.upsert({ roomId: room.roomId, roomName });
         Logger.debug('We created the room: ', room);
       }
 
@@ -262,6 +267,7 @@ export class HuddleService {
         joining,
       };
     } catch (err) {
+      Logger.error(`Error: ${err}`);
       if (err instanceof NoMeetingInProgress) {
         throw err;
       }
@@ -269,8 +275,8 @@ export class HuddleService {
     }
   }
 
-  private getGlobalPresence(): Promise<unknown> {
-    return fetch(`https://api.daily.co/v1/presence`, {
+  private getGlobalPresence(): Promise<HuddleLiveMeetingsResponse> {
+    return fetch(`https://api.huddle01.com/api/v1/live-meetings`, {
       method: 'GET',
       headers: this.getAuthHeaders(),
     })
@@ -285,6 +291,7 @@ export class HuddleService {
       .then((res) => res.json())
       .catch((err) => {
         Logger.error('Unable to obtain global presence data: ', err);
+        throw err;
       });
   }
 
@@ -316,8 +323,12 @@ export class HuddleService {
         Logger.debug('Null or undefined returned from global presence api');
         return;
       }
-
-      const occupiedRoomsNames = new Set<string>([...Object.keys(globalData)]);
+      const occupiedRoomIds = new Set<string>(
+        globalData.liveMeetings.map((m) => m.roomId),
+      );
+      const occupiedRoomsNames = new Set<string>(
+        (await this.roomMapService.getMany(occupiedRoomIds)).map((m) => m._id),
+      );
       Logger.debug('Occupied room names: ', [...occupiedRoomsNames]);
 
       inProgressList.forEach(({ roomName, confirmed }) => {

@@ -327,6 +327,8 @@ export class DailyService {
 
   @Interval(15000)
   async checkGlobalPresence() {
+    // disabling this while we try to get the huddle version running
+    return;
     try {
       const inProgressList = await this.inprogressService.getAll();
       if (inProgressList.length === 0) {

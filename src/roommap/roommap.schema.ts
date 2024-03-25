@@ -6,6 +6,9 @@ export type RoomMapDocument = HydratedDocument<RoomMap>;
 @Schema()
 export class RoomMap {
   @Prop()
+  _id: string;
+
+  @Prop()
   roomId: string;
 }
 

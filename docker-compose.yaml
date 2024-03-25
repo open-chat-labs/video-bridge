@@ -8,6 +8,7 @@ services:
     container_name: video_bridge_dev_api
     environment:
       - DAILY_API_KEY=${DAILY_API_KEY}
+      - HUDDLE_API_KEY=${HUDDLE_API_KEY}
       - OC_IDENTITY=${OC_IDENTITY}
       - OC_PUBLIC=${OC_PUBLIC}
       - MONGO_URI=mongodb://video_bridge_db:27017/video_bridge
@@ -29,6 +30,7 @@ services:
     container_name: video_bridge_api
     environment:
       - DAILY_API_KEY=${DAILY_API_KEY}
+      - HUDDLE_API_KEY=${HUDDLE_API_KEY}
       - OC_IDENTITY=${OC_IDENTITY}
       - OC_PUBLIC=${OC_PUBLIC}
       - MONGO_URI=mongodb://video_bridge_db:27017/video_bridge

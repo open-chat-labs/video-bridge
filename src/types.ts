@@ -130,3 +130,13 @@ export type HuddleRoomInfo = {
   roomId: string;
   meetingLink: string;
 };
+
+export type HuddleLiveMeeting = {
+  title: string;
+  hostWalletAddress: string[];
+  roomId: string;
+};
+
+export type HuddleLiveMeetingsResponse = {
+  liveMeetings: HuddleLiveMeeting[];
+};
