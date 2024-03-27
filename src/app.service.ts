@@ -11,6 +11,7 @@ import {
   ChatIdentifier,
   Meeting,
   MeetingEndedEvent,
+  RoomType,
   TokenPayload,
   mapTokenPayload,
 } from './types';
@@ -45,9 +46,9 @@ export class AppService {
     }).then((res) => res.ok);
   }
 
-  private getRoomParams(chatId: string): unknown {
+  private getRoomParams(chatId: string, roomType: RoomType): unknown {
     const now = Math.floor(Date.now() / 1000);
-    return {
+    const params = {
       name: chatId,
       privacy: 'private',
       properties: {
@@ -72,6 +73,20 @@ export class AppService {
         },
       },
     };
+    if (roomType === 'livestream') {
+      return {
+        ...params,
+        properties: {
+          ...params.properties,
+          enable_mesh_sfu: true,
+          enable_terse_logging: true,
+          enable_hidden_participants: true,
+          owner_only_broadcast: false,
+          experimental_optimize_large_calls: true,
+        },
+      };
+    }
+    return params;
   }
 
   private deleteRoom(roomName: string): Promise<boolean> {
@@ -88,13 +103,16 @@ export class AppService {
     );
   }
 
-  private createRoom(roomName: string): Promise<DailyRoomInfo> {
+  private createRoom(
+    roomName: string,
+    roomType: RoomType,
+  ): Promise<DailyRoomInfo> {
     const headers = this.getAuthHeaders();
     headers.append('Content-Type', 'application/json');
     const init = {
       method: 'POST',
       headers,
-      body: JSON.stringify(this.getRoomParams(roomName)),
+      body: JSON.stringify(this.getRoomParams(roomName, roomType)),
     };
     Logger.debug('Attempting to create a room with: ', init);
     return fetch(`https://api.daily.co/v1/rooms`, init).then((res) => {
@@ -113,20 +131,48 @@ export class AppService {
   }
 
   private getMeetingTokenParams(
+    joining: boolean,
+    roomType: RoomType,
     roomId: string,
     userId: string,
     username: string,
   ): unknown {
-    return {
+    const params = {
       properties: {
         room_name: roomId,
         user_name: username,
         user_id: userId,
+        is_owner: !joining,
+        permissions: {
+          canSend: true,
+          hasPresence: true,
+          canAdmin: !joining,
+        },
+      },
+    };
+
+    if (roomType === 'default') {
+      return params;
+    }
+
+    return {
+      ...params,
+      properties: {
+        ...params.properties,
+        start_video_off: joining,
+        start_audio_off: joining,
+        permissions: {
+          canSend: !joining,
+          hasPresence: !joining,
+          canAdmin: !joining,
+        },
       },
     };
   }
 
   private getMeetingToken(
+    joining: boolean,
+    roomType: RoomType,
     roomId: string,
     userId: string,
     username: string,
@@ -137,7 +183,7 @@ export class AppService {
       method: 'POST',
       headers,
       body: JSON.stringify(
-        this.getMeetingTokenParams(roomId, userId, username),
+        this.getMeetingTokenParams(joining, roomType, roomId, userId, username),
       ),
     })
       .then((res) => {
@@ -245,8 +291,20 @@ export class AppService {
     return decoded;
   }
 
+  async endMeeting(authToken: string): Promise<void> {
+    const decoded = this.decodeJwt(authToken);
+    const roomName = this.chatIdToRoomName(decoded.userId, decoded.chatId);
+    const inprog = await this.inprogressService.get(roomName);
+    if (inprog) {
+      this.processFinishedMeetings([
+        this.roomNameToMeeting(roomName, inprog.messageId),
+      ]);
+    }
+  }
+
   async getAccessToken(
     authToken: string,
+    roomType: RoomType,
     initiatorUsername: string,
     initiatorDisplayName?: string,
     initiatorAvatarId?: bigint,
@@ -257,7 +315,7 @@ export class AppService {
 
       const exists = await this.roomExists(roomName);
       if (!exists) {
-        const room = await this.createRoom(roomName);
+        const room = await this.createRoom(roomName, roomType);
         Logger.debug('We created the room: ', room);
       }
 
@@ -280,6 +338,8 @@ export class AppService {
       }
       Logger.debug('Meeting start messageId ', messageId);
       const token = await this.getMeetingToken(
+        decoded.claimType === 'JoinVideoCall',
+        roomType,
         roomName,
         decoded.userId,
         initiatorUsername,

@@ -1,5 +1,7 @@
 import { IsNotEmpty, IsObject } from 'class-validator';
 
+export type RoomType = 'livestream' | 'default';
+
 export type ApiTokenPayload = {
   claim_type: 'StartVideoCall' | 'JoinVideoCall';
   user_id: string;

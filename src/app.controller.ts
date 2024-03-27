@@ -10,7 +10,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { AppService } from './app.service';
-import { AccessTokenResponse, MeetingEndedEvent } from './types';
+import { AccessTokenResponse, MeetingEndedEvent, RoomType } from './types';
 import { ConfigService } from '@nestjs/config';
 import * as crypto from 'crypto';
 import { validate } from 'class-validator';
@@ -32,9 +32,20 @@ export class AppController {
     return this.appService.getMeetings();
   }
 
+  @Post('end_meeting')
+  endMeeting(@Headers('x-auth-jwt') auth: string | undefined): Promise<void> {
+    if (auth === undefined) {
+      throw new UnauthorizedException(
+        'You must provide an OpenChat authorisation jwt to show that you are permitted to end the meeting',
+      );
+    }
+    return this.appService.endMeeting(auth);
+  }
+
   @Get('meeting_access_token')
   getAccessToken(
     @Headers('x-auth-jwt') auth: string | undefined,
+    @Query('room-type') roomType: string, // I *think* this should actually be in the jwt
     @Query('initiator-username') initiatorUsername: string,
     @Query('initiator-displayname') initiatorDisplayname: string,
     @Query('initiator-avatarid') initiatorAvatarId: string | undefined,
@@ -45,6 +56,7 @@ export class AppController {
       );
     }
     Logger.debug('Input params: ', [
+      roomType,
       initiatorUsername,
       initiatorDisplayname,
       initiatorAvatarId,
@@ -52,6 +64,7 @@ export class AppController {
     ]);
     return this.appService.getAccessToken(
       auth,
+      roomType as RoomType,
       initiatorUsername,
       initiatorDisplayname,
       initiatorAvatarId ? BigInt(initiatorAvatarId) : undefined,
