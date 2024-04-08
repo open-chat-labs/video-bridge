@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { ChatIdentifier, Meeting } from '../types';
+import { ChatIdentifier, Meeting, RoomType } from '../types';
 import { newMessageId, waitAll } from '../utils';
 import { GroupClient } from './group/group.client';
 import { Secp256k1KeyIdentity } from '@dfinity/identity-secp256k1';
@@ -18,6 +18,7 @@ export class OpenChatService {
 
   sendVideoCallStartedMessage(
     chatId: ChatIdentifier,
+    roomType: RoomType,
     initiatorId: string,
     initiatorUsername: string,
     initiatorDisplayname?: string,
@@ -31,6 +32,7 @@ export class OpenChatService {
       case 'channel':
         const communityClient = this.getCommunityClient(chatId.communityId);
         communityClient.sendVideoCallStartedMessage(
+          roomType,
           msgId,
           chatId.channelId,
           initiatorId,
@@ -41,6 +43,7 @@ export class OpenChatService {
       case 'group_chat':
         const groupClient = this.getGroupClient(chatId.groupId);
         groupClient.sendVideoCallStartedMessage(
+          roomType,
           msgId,
           initiatorId,
           initiatorUsername,
@@ -50,6 +53,7 @@ export class OpenChatService {
       case 'direct_chat':
         const otherUserClient = this.getUserClient(chatId.userId);
         otherUserClient.sendVideoCallStartedMessage(
+          roomType,
           msgId,
           initiatorId,
           initiatorUsername,

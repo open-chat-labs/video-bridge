@@ -73,7 +73,7 @@ export class AppService {
         },
       },
     };
-    if (roomType === 'livestream') {
+    if (roomType === 'broadcast') {
       return {
         ...params,
         properties: {
@@ -232,6 +232,7 @@ export class AppService {
 
   private async sendStartMessageToOpenChat(
     roomName: string,
+    roomType: RoomType,
     joining: boolean,
     chatId: ChatIdentifier,
     initiatorId: string,
@@ -254,6 +255,7 @@ export class AppService {
       } else {
         const msgId = this.openChat.sendVideoCallStartedMessage(
           chatId,
+          roomType,
           initiatorId,
           initiatorUsername,
           initiatorDisplayname,
@@ -321,6 +323,7 @@ export class AppService {
 
       const [messageId, joining] = await this.sendStartMessageToOpenChat(
         roomName,
+        roomType,
         decoded.claimType === 'JoinVideoCall',
         decoded.chatId,
         decoded.userId,
