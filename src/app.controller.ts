@@ -62,6 +62,9 @@ export class AppController {
       initiatorAvatarId,
       initiatorAvatarId === undefined,
     ]);
+    if (!roomType) {
+      roomType = 'default';
+    }
     return this.appService.getAccessToken(
       auth,
       roomType as RoomType,
