@@ -27,7 +27,8 @@ export type AccessGateUpdate = { 'NoChange' : null } |
   { 'SetToNone' : null } |
   { 'SetToSome' : AccessGate };
 export type AccessTokenType = { 'JoinVideoCall' : null } |
-  { 'StartVideoCall' : null };
+  { 'StartVideoCall' : null } |
+  { 'MarkVideoCallAsEnded' : null };
 export type AccessorId = Principal;
 export interface Account {
   'owner' : Principal,
@@ -1037,6 +1038,7 @@ export interface GroupPermissions {
   'invite_users' : PermissionRole,
   'thread_permissions' : [] | [MessagePermissions],
   'change_roles' : PermissionRole,
+  'start_video_call' : PermissionRole,
   'add_members' : PermissionRole,
   'pin_messages' : PermissionRole,
   'react_to_messages' : PermissionRole,
@@ -1245,7 +1247,6 @@ export interface Message {
   'content' : MessageContent,
   'edited' : boolean,
   'tips' : Array<[CanisterId, Array<[UserId, bigint]>]>,
-  'last_updated' : [] | [TimestampMillis],
   'sender' : UserId,
   'thread_summary' : [] | [ThreadSummary],
   'message_id' : MessageId,
@@ -1460,6 +1461,7 @@ export interface OptionalGroupPermissions {
   'invite_users' : [] | [PermissionRole],
   'thread_permissions' : OptionalMessagePermissionsUpdate,
   'change_roles' : [] | [PermissionRole],
+  'start_video_call' : [] | [PermissionRole],
   'pin_messages' : [] | [PermissionRole],
   'react_to_messages' : [] | [PermissionRole],
 }
@@ -1942,8 +1944,10 @@ export interface StartVideoCallArgs {
   'initiator_username' : string,
   'channel_id' : ChannelId,
   'initiator' : UserId,
+  'max_duration' : [] | [Milliseconds],
   'initiator_display_name' : [] | [string],
   'message_id' : MessageId,
+  'call_type' : VideoCallType,
 }
 export type StartVideoCallResponse = { 'NotAuthorized' : null } |
   { 'Success' : null };
@@ -2227,8 +2231,11 @@ export interface VideoCall { 'message_index' : MessageIndex }
 export interface VideoCallContent {
   'participants' : Array<CallParticipant>,
   'ended' : [] | [TimestampMillis],
+  'call_type' : VideoCallType,
 }
 export interface VideoCallContentInitial { 'initiator' : UserId }
+export type VideoCallType = { 'Default' : null } |
+  { 'Broadcast' : null };
 export type VideoCallUpdates = { 'NoChange' : null } |
   { 'SetToNone' : null } |
   { 'SetToSome' : VideoCall };
