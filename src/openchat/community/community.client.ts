@@ -3,7 +3,7 @@ import { CandidService } from '../candidService';
 import { CommunityService, idlFactory } from './candid/idl';
 import { Principal } from '@dfinity/principal';
 import { Identity } from '@dfinity/agent';
-import { ChannelMeeting, RoomType } from '../../types';
+import { ChannelMeeting, VideoCallType } from '../../types';
 
 export class CommunityClient extends CandidService {
   private communityService: CommunityService;
@@ -22,7 +22,7 @@ export class CommunityClient extends CandidService {
   }
 
   sendVideoCallStartedMessage(
-    roomType: RoomType,
+    callType: VideoCallType,
     msgId: bigint,
     channelId: string,
     initiatorId: string,
@@ -40,7 +40,7 @@ export class CommunityClient extends CandidService {
           : [],
         max_duration: [],
         call_type:
-          roomType === 'broadcast' ? { Broadcast: null } : { Default: null },
+          callType === 'Broadcast' ? { Broadcast: null } : { Default: null },
       }),
       (res) => {
         if (!('Success' in res)) {
