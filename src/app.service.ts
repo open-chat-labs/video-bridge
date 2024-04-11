@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Injectable,
   InternalServerErrorException,
   Logger,
@@ -11,8 +12,8 @@ import {
   ChatIdentifier,
   Meeting,
   MeetingEndedEvent,
-  RoomType,
   TokenPayload,
+  VideoCallType,
   mapTokenPayload,
 } from './types';
 import { ConfigService } from '@nestjs/config';
@@ -46,7 +47,7 @@ export class AppService {
     }).then((res) => res.ok);
   }
 
-  private getRoomParams(chatId: string, roomType: RoomType): unknown {
+  private getRoomParams(chatId: string, callType: VideoCallType): unknown {
     const now = Math.floor(Date.now() / 1000);
     const params = {
       name: chatId,
@@ -73,7 +74,7 @@ export class AppService {
         },
       },
     };
-    if (roomType === 'broadcast') {
+    if (callType === 'Broadcast') {
       return {
         ...params,
         properties: {
@@ -105,14 +106,14 @@ export class AppService {
 
   private createRoom(
     roomName: string,
-    roomType: RoomType,
+    callType: VideoCallType,
   ): Promise<DailyRoomInfo> {
     const headers = this.getAuthHeaders();
     headers.append('Content-Type', 'application/json');
     const init = {
       method: 'POST',
       headers,
-      body: JSON.stringify(this.getRoomParams(roomName, roomType)),
+      body: JSON.stringify(this.getRoomParams(roomName, callType)),
     };
     Logger.debug('Attempting to create a room with: ', init);
     return fetch(`https://api.daily.co/v1/rooms`, init).then((res) => {
@@ -132,7 +133,7 @@ export class AppService {
 
   private getMeetingTokenParams(
     joining: boolean,
-    roomType: RoomType,
+    callType: VideoCallType,
     roomId: string,
     userId: string,
     username: string,
@@ -151,7 +152,7 @@ export class AppService {
       },
     };
 
-    if (roomType === 'default') {
+    if (callType === 'Default') {
       return params;
     }
 
@@ -172,7 +173,7 @@ export class AppService {
 
   private getMeetingToken(
     joining: boolean,
-    roomType: RoomType,
+    callType: VideoCallType,
     roomId: string,
     userId: string,
     username: string,
@@ -183,7 +184,7 @@ export class AppService {
       method: 'POST',
       headers,
       body: JSON.stringify(
-        this.getMeetingTokenParams(joining, roomType, roomId, userId, username),
+        this.getMeetingTokenParams(joining, callType, roomId, userId, username),
       ),
     })
       .then((res) => {
@@ -232,7 +233,7 @@ export class AppService {
 
   private async sendStartMessageToOpenChat(
     roomName: string,
-    roomType: RoomType,
+    callType: VideoCallType,
     joining: boolean,
     chatId: ChatIdentifier,
     initiatorId: string,
@@ -255,7 +256,7 @@ export class AppService {
       } else {
         const msgId = this.openChat.sendVideoCallStartedMessage(
           chatId,
-          roomType,
+          callType,
           initiatorId,
           initiatorUsername,
           initiatorDisplayname,
@@ -306,7 +307,6 @@ export class AppService {
 
   async getAccessToken(
     authToken: string,
-    roomType: RoomType,
     initiatorUsername: string,
     initiatorDisplayName?: string,
     initiatorAvatarId?: bigint,
@@ -317,13 +317,18 @@ export class AppService {
 
       const exists = await this.roomExists(roomName);
       if (!exists) {
-        const room = await this.createRoom(roomName, roomType);
+        if (decoded.claimType === 'JoinVideoCall') {
+          throw new BadRequestException(
+            "Trying to join a call when the room doesn't exist",
+          );
+        }
+        const room = await this.createRoom(roomName, decoded.callType);
         Logger.debug('We created the room: ', room);
       }
 
       const [messageId, joining] = await this.sendStartMessageToOpenChat(
         roomName,
-        roomType,
+        decoded.callType,
         decoded.claimType === 'JoinVideoCall',
         decoded.chatId,
         decoded.userId,
@@ -342,7 +347,7 @@ export class AppService {
       Logger.debug('Meeting start messageId ', messageId);
       const token = await this.getMeetingToken(
         decoded.claimType === 'JoinVideoCall',
-        roomType,
+        decoded.callType,
         roomName,
         decoded.userId,
         initiatorUsername,

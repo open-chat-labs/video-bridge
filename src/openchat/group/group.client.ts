@@ -3,7 +3,7 @@ import { CandidService } from '../candidService';
 import { GroupService, idlFactory } from './candid/idl';
 import { Principal } from '@dfinity/principal';
 import { Identity } from '@dfinity/agent';
-import { GroupMeeting, RoomType } from '../../types';
+import { GroupMeeting, VideoCallType } from '../../types';
 
 export class GroupClient extends CandidService {
   private groupService: GroupService;
@@ -22,7 +22,7 @@ export class GroupClient extends CandidService {
   }
 
   sendVideoCallStartedMessage(
-    roomType: RoomType,
+    callType: VideoCallType,
     msgId: bigint,
     initiatorId: string,
     initiatorUsername: string,
@@ -38,7 +38,7 @@ export class GroupClient extends CandidService {
           : [],
         max_duration: [],
         call_type:
-          roomType === 'broadcast' ? { Broadcast: null } : { Default: null },
+          callType === 'Broadcast' ? { Broadcast: null } : { Default: null },
       }),
       (res) => {
         if (!('Success' in res)) {

@@ -10,7 +10,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { AppService } from './app.service';
-import { AccessTokenResponse, MeetingEndedEvent, RoomType } from './types';
+import { AccessTokenResponse, MeetingEndedEvent } from './types';
 import { ConfigService } from '@nestjs/config';
 import * as crypto from 'crypto';
 import { validate } from 'class-validator';
@@ -45,7 +45,6 @@ export class AppController {
   @Get('meeting_access_token')
   getAccessToken(
     @Headers('x-auth-jwt') auth: string | undefined,
-    @Query('room-type') roomType: string, // I *think* this should actually be in the jwt
     @Query('initiator-username') initiatorUsername: string,
     @Query('initiator-displayname') initiatorDisplayname: string,
     @Query('initiator-avatarid') initiatorAvatarId: string | undefined,
@@ -56,18 +55,13 @@ export class AppController {
       );
     }
     Logger.debug('Input params: ', [
-      roomType,
       initiatorUsername,
       initiatorDisplayname,
       initiatorAvatarId,
       initiatorAvatarId === undefined,
     ]);
-    if (!roomType) {
-      roomType = 'default';
-    }
     return this.appService.getAccessToken(
       auth,
-      roomType as RoomType,
       initiatorUsername,
       initiatorDisplayname,
       initiatorAvatarId ? BigInt(initiatorAvatarId) : undefined,

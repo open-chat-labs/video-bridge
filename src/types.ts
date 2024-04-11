@@ -1,16 +1,18 @@
 import { IsNotEmpty, IsObject } from 'class-validator';
 
-export type RoomType = 'broadcast' | 'default';
-
 export type ApiTokenPayload = {
   claim_type: 'StartVideoCall' | 'JoinVideoCall';
+  call_type?: VideoCallType;
   user_id: string;
   chat_id: ApiChatIdentifier;
   exp: number;
 };
 
+export type VideoCallType = 'Default' | 'Broadcast';
+
 export type TokenPayload = {
   claimType: 'StartVideoCall' | 'JoinVideoCall';
+  callType: VideoCallType;
   userId: string;
   chatId: ChatIdentifier;
 };
@@ -37,6 +39,7 @@ export function mapTokenPayload(token: ApiTokenPayload): TokenPayload {
     claimType: token.claim_type,
     userId: token.user_id,
     chatId: mapChatId(token.chat_id),
+    callType: token.call_type ?? 'Default',
   };
 }
 

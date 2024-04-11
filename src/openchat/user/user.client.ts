@@ -3,7 +3,7 @@ import { CandidService } from '../candidService';
 import { UserService, idlFactory } from './candid/idl';
 import { Principal } from '@dfinity/principal';
 import { Identity } from '@dfinity/agent';
-import { DirectMeeting, RoomType } from '../../types';
+import { DirectMeeting, VideoCallType } from '../../types';
 
 export class UserClient extends CandidService {
   private userService: UserService;
@@ -22,7 +22,7 @@ export class UserClient extends CandidService {
   }
 
   sendVideoCallStartedMessage(
-    roomType: RoomType,
+    callType: VideoCallType,
     msgId: bigint,
     initiatorId: string,
     initiatorUsername: string,
@@ -40,7 +40,7 @@ export class UserClient extends CandidService {
           : [],
         max_duration: [],
         call_type:
-          roomType === 'broadcast' ? { Broadcast: null } : { Default: null },
+          callType === 'Broadcast' ? { Broadcast: null } : { Default: null },
       }),
       (res) => {
         if (!('Success' in res)) {
