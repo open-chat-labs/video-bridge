@@ -40,11 +40,17 @@ export class AppService {
     return headers;
   }
 
-  private roomExists(roomId: string): Promise<boolean> {
+  private roomExists(roomId: string): Promise<DailyRoomInfo | undefined> {
     return fetch(`https://api.daily.co/v1/rooms/${roomId}`, {
       method: 'GET',
       headers: this.getAuthHeaders(),
-    }).then((res) => res.ok);
+    }).then((res) => {
+      if (res.ok) {
+        return res.json();
+      } else {
+        return undefined;
+      }
+    });
   }
 
   private getRoomParams(chatId: string, callType: VideoCallType): unknown {
@@ -305,6 +311,12 @@ export class AppService {
     }
   }
 
+  private callTypeFromRoom(room: DailyRoomInfo): VideoCallType {
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    //@ts-ignore
+    return room.config.enable_hidden_participants ? 'Broadcast' : 'Default';
+  }
+
   async getAccessToken(
     authToken: string,
     initiatorUsername: string,
@@ -315,20 +327,22 @@ export class AppService {
       const decoded = this.decodeJwt(authToken);
       const roomName = this.chatIdToRoomName(decoded.userId, decoded.chatId);
 
-      const exists = await this.roomExists(roomName);
-      if (!exists) {
+      let room = await this.roomExists(roomName);
+      if (room === undefined) {
         if (decoded.claimType === 'JoinVideoCall') {
           throw new BadRequestException(
             "Trying to join a call when the room doesn't exist",
           );
         }
-        const room = await this.createRoom(roomName, decoded.callType);
+        room = await this.createRoom(roomName, decoded.callType);
         Logger.debug('We created the room: ', room);
       }
 
+      const callType = this.callTypeFromRoom(room);
+
       const [messageId, joining] = await this.sendStartMessageToOpenChat(
         roomName,
-        decoded.callType,
+        callType,
         decoded.claimType === 'JoinVideoCall',
         decoded.chatId,
         decoded.userId,
@@ -347,7 +361,7 @@ export class AppService {
       Logger.debug('Meeting start messageId ', messageId);
       const token = await this.getMeetingToken(
         decoded.claimType === 'JoinVideoCall',
-        decoded.callType,
+        callType,
         roomName,
         decoded.userId,
         initiatorUsername,
