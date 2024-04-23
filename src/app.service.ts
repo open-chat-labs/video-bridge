@@ -61,7 +61,7 @@ export class AppService {
       properties: {
         nbf: now,
         exp: now + 60 * 60,
-        enable_people_ui: true,
+        enable_people_ui: false,
         enable_pip_ui: true,
         enable_emoji_reactions: false,
         enable_hand_raising: false,
