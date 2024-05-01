@@ -330,9 +330,7 @@ export class AppService {
       let room = await this.roomExists(roomName);
       if (room === undefined) {
         if (decoded.claimType === 'JoinVideoCall') {
-          throw new BadRequestException(
-            "Trying to join a call when the room doesn't exist",
-          );
+          throw new NoMeetingInProgress(roomName);
         }
         room = await this.createRoom(roomName, decoded.callType);
         Logger.debug('We created the room: ', room);
