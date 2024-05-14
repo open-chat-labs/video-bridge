@@ -4,6 +4,7 @@ import { GroupService, idlFactory } from './candid/idl';
 import { Principal } from '@dfinity/principal';
 import { Identity } from '@dfinity/agent';
 import { GroupMeeting, VideoCallType } from '../../types';
+import { MAX_CALL_DURATION_MS } from '../constants';
 
 export class GroupClient extends CandidService {
   private groupService: GroupService;
@@ -36,7 +37,7 @@ export class GroupClient extends CandidService {
         initiator_display_name: initiatorDisplayName
           ? [initiatorDisplayName]
           : [],
-        max_duration: [],
+        max_duration: [MAX_CALL_DURATION_MS],
         call_type:
           callType === 'Broadcast' ? { Broadcast: null } : { Default: null },
       }),
