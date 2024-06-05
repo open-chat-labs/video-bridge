@@ -85,6 +85,7 @@ export class AppService {
         ...params,
         properties: {
           ...params.properties,
+          max_participants: 200,
           enable_mesh_sfu: true,
           enable_terse_logging: true,
           enable_hidden_participants: true,
