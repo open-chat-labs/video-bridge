@@ -1,18 +1,39 @@
 import { IsNotEmpty, IsObject } from 'class-validator';
 
-export type ApiTokenPayload = {
-  claim_type: 'StartVideoCall' | 'JoinVideoCall';
-  call_type?: VideoCallType;
+export type ApiStartClaims = {
+  claim_type: 'StartVideoCall';
+  call_type: VideoCallType;
   user_id: string;
   chat_id: ApiChatIdentifier;
+  is_diamond: boolean;
+};
+
+export type ApiJoinClaims = {
+  claim_type: 'JoinVideoCall';
+  user_id: string;
+  chat_id: ApiChatIdentifier;
+};
+
+export type ApiClaims = ApiStartClaims | ApiJoinClaims;
+
+export type ApiTokenPayload = ApiClaims & {
   exp: number;
 };
 
 export type VideoCallType = 'Default' | 'Broadcast';
 
-export type TokenPayload = {
-  claimType: 'StartVideoCall' | 'JoinVideoCall';
+export type TokenPayload = StartClaims | JoinClaims;
+
+export type StartClaims = {
+  claimType: 'StartVideoCall';
   callType: VideoCallType;
+  userId: string;
+  chatId: ChatIdentifier;
+  isDiamond: boolean;
+};
+
+export type JoinClaims = {
+  claimType: 'JoinVideoCall';
   userId: string;
   chatId: ChatIdentifier;
 };
@@ -35,12 +56,22 @@ export type ApiChannelIdentifier = {
 };
 
 export function mapTokenPayload(token: ApiTokenPayload): TokenPayload {
-  return {
-    claimType: token.claim_type,
-    userId: token.user_id,
-    chatId: mapChatId(token.chat_id),
-    callType: token.call_type ?? 'Default',
-  };
+  switch (token.claim_type) {
+    case 'StartVideoCall':
+      return {
+        claimType: token.claim_type,
+        userId: token.user_id,
+        chatId: mapChatId(token.chat_id),
+        callType: token.call_type,
+        isDiamond: token.is_diamond,
+      };
+    case 'JoinVideoCall':
+      return {
+        claimType: token.claim_type,
+        userId: token.user_id,
+        chatId: mapChatId(token.chat_id),
+      };
+  }
 }
 
 export function mapChatId(chatId: ApiChatIdentifier): ChatIdentifier {
