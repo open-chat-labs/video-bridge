@@ -1,5 +1,4 @@
 import {
-  BadRequestException,
   Injectable,
   InternalServerErrorException,
   Logger,
@@ -53,14 +52,18 @@ export class AppService {
     });
   }
 
-  private getRoomParams(chatId: string, callType: VideoCallType): unknown {
+  private getRoomParams(
+    chatId: string,
+    callType: VideoCallType,
+    isDiamond: boolean,
+  ): unknown {
     const now = Math.floor(Date.now() / 1000);
     const params = {
       name: chatId,
       privacy: 'private',
       properties: {
         nbf: now,
-        exp: now + 60 * 60,
+        exp: now + (isDiamond ? 120 : 60) * 60,
         enable_people_ui: false,
         enable_pip_ui: true,
         enable_emoji_reactions: false,
@@ -114,13 +117,14 @@ export class AppService {
   private createRoom(
     roomName: string,
     callType: VideoCallType,
+    isDiamond: boolean,
   ): Promise<DailyRoomInfo> {
     const headers = this.getAuthHeaders();
     headers.append('Content-Type', 'application/json');
     const init = {
       method: 'POST',
       headers,
-      body: JSON.stringify(this.getRoomParams(roomName, callType)),
+      body: JSON.stringify(this.getRoomParams(roomName, callType, isDiamond)),
     };
     Logger.debug('Attempting to create a room with: ', init);
     return fetch(`https://api.daily.co/v1/rooms`, init).then((res) => {
@@ -333,7 +337,11 @@ export class AppService {
         if (decoded.claimType === 'JoinVideoCall') {
           throw new NoMeetingInProgress(roomName);
         }
-        room = await this.createRoom(roomName, decoded.callType);
+        room = await this.createRoom(
+          roomName,
+          decoded.callType,
+          decoded.isDiamond,
+        );
         Logger.debug('We created the room: ', room);
       }
 
