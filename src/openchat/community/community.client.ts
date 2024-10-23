@@ -52,7 +52,13 @@ export class CommunityClient extends CandidService {
         }
         return msgId;
       },
-    );
+    ).catch((err) => {
+      Logger.error(
+        'Unable to send message to start video call: ',
+        JSON.stringify(err),
+      );
+      return msgId;
+    });
   }
 
   meetingFinished(meeting: ChannelMeeting): Promise<ChannelMeeting> {

@@ -50,7 +50,13 @@ export class GroupClient extends CandidService {
         }
         return msgId;
       },
-    );
+    ).catch((err) => {
+      Logger.error(
+        'Unable to send message to start video call: ',
+        JSON.stringify(err),
+      );
+      return msgId;
+    });
   }
 
   meetingFinished(meeting: GroupMeeting): Promise<GroupMeeting> {
