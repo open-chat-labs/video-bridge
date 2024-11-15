@@ -1,1 +1,2 @@
-export const MAX_CALL_DURATION_MS = BigInt(1000 * 60 * 60);
+export const DEFAULT_MAX_CALL_DURATION_MS = BigInt(1000 * 60 * 60);
+export const DIAMOND_MAX_CALL_DURATION_MS = BigInt(2) * DEFAULT_MAX_CALL_DURATION_MS

@@ -20,6 +20,7 @@ export class OpenChatService {
     chatId: ChatIdentifier,
     callType: VideoCallType,
     initiatorId: string,
+    initiatorIsDiamond: boolean,
     initiatorUsername: string,
     initiatorDisplayname?: string,
     initiatorAvatarId?: bigint,
@@ -36,6 +37,7 @@ export class OpenChatService {
           msgId,
           chatId.channelId,
           initiatorId,
+          initiatorIsDiamond,
           initiatorUsername,
           initiatorDisplayname,
         );
@@ -46,6 +48,7 @@ export class OpenChatService {
           callType,
           msgId,
           initiatorId,
+          initiatorIsDiamond,
           initiatorUsername,
           initiatorDisplayname,
         );
@@ -56,6 +59,7 @@ export class OpenChatService {
           callType,
           msgId,
           initiatorId,
+          initiatorIsDiamond,
           initiatorUsername,
           initiatorDisplayname,
           initiatorAvatarId,

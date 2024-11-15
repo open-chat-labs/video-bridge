@@ -4,7 +4,7 @@ import { CommunityService, idlFactory } from './candid/idl';
 import { Principal } from '@dfinity/principal';
 import { Identity } from '@dfinity/agent';
 import { ChannelMeeting, VideoCallType } from '../../types';
-import { MAX_CALL_DURATION_MS } from '../constants';
+import { DEFAULT_MAX_CALL_DURATION_MS, DIAMOND_MAX_CALL_DURATION_MS } from '../constants';
 
 export class CommunityClient extends CandidService {
   private communityService: CommunityService;
@@ -27,6 +27,7 @@ export class CommunityClient extends CandidService {
     msgId: bigint,
     channelId: string,
     initiatorId: string,
+    initiatorIsDiamond: boolean,
     initiatorUsername: string,
     initiatorDisplayName?: string,
   ): Promise<bigint> {
@@ -39,7 +40,7 @@ export class CommunityClient extends CandidService {
         initiator_display_name: initiatorDisplayName
           ? [initiatorDisplayName]
           : [],
-        max_duration: [MAX_CALL_DURATION_MS],
+        max_duration: [initiatorIsDiamond ? DIAMOND_MAX_CALL_DURATION_MS : DEFAULT_MAX_CALL_DURATION_MS],
         call_type:
           callType === 'Broadcast' ? { Broadcast: null } : { Default: null },
       }),
