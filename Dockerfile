@@ -1,5 +1,5 @@
 # build stage
-FROM node:18-alpine as build
+FROM node:20-alpine as build
 
 WORKDIR /video_bridge
 
@@ -12,7 +12,7 @@ COPY . .
 RUN npm run build
 
 # prod stage
-FROM node:18-alpine
+FROM node:20-alpine
 
 WORKDIR /video_bridge
 
