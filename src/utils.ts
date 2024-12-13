@@ -7,19 +7,15 @@ import {
   Meeting,
 } from './types';
 import { toBigIntBE, toBufferBE } from 'bigint-buffer';
-import { v1 as uuidv1 } from 'uuid';
-
-const max32 = Math.pow(2, 32) - 1;
-
-export function generateUint64(): bigint {
-  const rand1 = Math.floor(Math.random() * max32);
-  const rand2 = Math.floor(Math.random() * max32);
-
-  return (BigInt(rand1) << BigInt(32)) + BigInt(rand2);
-}
 
 export function newMessageId(): bigint {
-  return BigInt(parseInt(uuidv1().replace(/-/g, ''), 16));
+  return random64();
+}
+
+function random64(): bigint {
+  const bytes = new BigUint64Array(1);
+  crypto.getRandomValues(bytes);
+  return bytes[0];
 }
 
 export type WaitAllResult<T> = {
