@@ -42,6 +42,11 @@ export class AppController {
     return this.appService.endMeeting(auth);
   }
 
+  @Post('end_meeting_hack')
+  endMeetingHack(): Promise<void> {
+    return this.appService.endMeetingHack();
+  }
+
   @Get('meeting_access_token')
   getAccessToken(
     @Headers('x-auth-jwt') auth: string | undefined,

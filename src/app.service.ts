@@ -318,6 +318,19 @@ export class AppService {
     }
   }
 
+  async endMeetingHack(): Promise<void> {
+    const roomName = this.chatIdToRoomName('', {
+      kind: 'group_chat',
+      groupId: '2rgzm-4iaaa-aaaaf-aaa5a-cai',
+    });
+    this.processFinishedMeetings([
+      this.roomNameToMeeting(
+        roomName,
+        '262197218389625099743312975782914031616',
+      ),
+    ]);
+  }
+
   private callTypeFromRoom(room: DailyRoomInfo): VideoCallType {
     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     //@ts-ignore
@@ -355,7 +368,7 @@ export class AppService {
         decoded.claimType === 'JoinVideoCall',
         decoded.chatId,
         decoded.userId,
-        decoded.claimType === "StartVideoCall" && decoded.isDiamond,
+        decoded.claimType === 'StartVideoCall' && decoded.isDiamond,
         initiatorUsername,
         initiatorDisplayName,
         initiatorAvatarId,
