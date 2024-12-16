@@ -67,7 +67,7 @@ export class GroupClient extends CandidService {
         message_id: meeting.messageId,
       }),
       (res) => {
-        console.log('End video call response', meeting, res);
+        Logger.log('End video call response', meeting, res);
 
         // if we get *any* response here we consider it success
         // only an exception is a problem
