@@ -32,7 +32,7 @@ export class CommunityClient extends CandidService {
     initiatorDisplayName?: string,
   ): Promise<bigint> {
     return this.handleResponse(
-      this.communityService.start_video_call({
+      this.communityService.start_video_call_v2({
         message_id: msgId,
         channel_id: BigInt(channelId),
         initiator: Principal.fromText(initiatorId),
@@ -69,7 +69,7 @@ export class CommunityClient extends CandidService {
       meeting,
     );
     return this.handleResponse(
-      this.communityService.end_video_call({
+      this.communityService.end_video_call_v2({
         channel_id: BigInt(meeting.chatId.channelId),
         message_id: meeting.messageId,
       }),
