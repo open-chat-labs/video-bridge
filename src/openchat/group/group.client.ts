@@ -31,7 +31,7 @@ export class GroupClient extends CandidService {
     initiatorDisplayName?: string,
   ): Promise<bigint> {
     return this.handleResponse(
-      this.groupService.start_video_call({
+      this.groupService.start_video_call_v2({
         message_id: msgId,
         initiator: Principal.fromText(initiatorId),
         initiator_username: initiatorUsername,
@@ -63,7 +63,7 @@ export class GroupClient extends CandidService {
   meetingFinished(meeting: GroupMeeting): Promise<GroupMeeting> {
     Logger.debug('Sending meeting finished on group ', this.groupId, meeting);
     return this.handleResponse(
-      this.groupService.end_video_call({
+      this.groupService.end_video_call_v2({
         message_id: meeting.messageId,
       }),
       () => {

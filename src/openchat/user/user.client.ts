@@ -32,7 +32,7 @@ export class UserClient extends CandidService {
     initiatorAvatarId?: bigint,
   ): Promise<bigint> {
     return this.handleResponse(
-      this.userService.start_video_call({
+      this.userService.start_video_call_v2({
         message_id: msgId,
         initiator: Principal.fromText(initiatorId),
         initiator_username: initiatorUsername,
@@ -69,7 +69,7 @@ export class UserClient extends CandidService {
     const msg = `Sending meeting finished from userA (${this.userId}) to userB (${otherUser})`;
     Logger.debug(msg);
     return this.handleResponse(
-      this.userService.end_video_call({
+      this.userService.end_video_call_v2({
         user_id: Principal.fromText(otherUser),
         message_id: meeting.messageId,
       }),
