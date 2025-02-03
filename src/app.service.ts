@@ -355,7 +355,7 @@ export class AppService {
         decoded.claimType === 'JoinVideoCall',
         decoded.chatId,
         decoded.userId,
-        decoded.claimType === "StartVideoCall" && decoded.isDiamond,
+        decoded.claimType === 'StartVideoCall' && decoded.isDiamond,
         initiatorUsername,
         initiatorDisplayName,
         initiatorAvatarId,
@@ -387,6 +387,8 @@ export class AppService {
       if (err instanceof NoMeetingInProgress) {
         throw err;
       }
+
+      console.error('Error obtaining room access token', err);
       throw new UnauthorizedException('Error obtaining room access token', err);
     }
   }

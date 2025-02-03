@@ -24,15 +24,15 @@ const groupId: GroupChatIdentifier = {
 };
 const channelId: ChannelIdentifier = {
   kind: 'channel',
-  communityId: 'cinef-v4aaa-aaaaa-qaalq-cai',
-  channelId: '283806532254715438641103320620325336219',
+  communityId: 'd6g4o-amaaa-aaaaa-qaaoq-cai',
+  channelId: '1576343893',
 };
 
 describe('create room name from chat identifier', () => {
   describe('channel identifiers', () => {
     test('create room name from channel id', () => {
       const roomName = chatIdToRoomName(requestingUserId, channelId);
-      expect(roomName).toEqual('CgAAAAAAQABcBAQ1YMmXxLOH4FT_VUHapr0mw');
+      expect(roomName).toEqual('CgAAAAAAQAB0BAQAAAAAAAAAAAAAAAAXfUZVQ');
     });
 
     test('roundtrip a channel identifier', () => {
@@ -40,12 +40,12 @@ describe('create room name from chat identifier', () => {
       const meeting = roomNameToMeeting(roomName, '123');
       expect(meeting).toMatchObject({
         kind: 'channel_meeting',
-        roomName: 'CgAAAAAAQABcBAQ1YMmXxLOH4FT_VUHapr0mw',
+        roomName: 'CgAAAAAAQAB0BAQAAAAAAAAAAAAAAAAXfUZVQ',
         messageId: 123n,
         chatId: {
           kind: 'channel',
-          communityId: 'cinef-v4aaa-aaaaa-qaalq-cai',
-          channelId: '283806532254715438641103320620325336219',
+          communityId: 'd6g4o-amaaa-aaaaa-qaaoq-cai',
+          channelId: '1576343893',
         },
       });
     });

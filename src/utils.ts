@@ -7,15 +7,15 @@ import {
   Meeting,
 } from './types';
 import { toBigIntBE, toBufferBE } from 'bigint-buffer';
+import { randomBytes } from 'crypto';
 
 export function newMessageId(): bigint {
   return random64();
 }
 
 function random64(): bigint {
-  const bytes = new BigUint64Array(1);
-  crypto.getRandomValues(bytes);
-  return bytes[0];
+  const bytes = randomBytes(8);
+  return BigInt.asUintN(64, BigInt('0x' + bytes.toString('hex')));
 }
 
 export type WaitAllResult<T> = {
@@ -80,7 +80,7 @@ function sanitise(base64: string): string {
 }
 
 export function channelIdToBase64(channelId: string): string {
-  const bigintVal = BigInt(channelId);
+  const bigintVal = toBigInt32(channelId);
   const buffer = toBufferBE(bigintVal, 16);
   const base64 = buffer.toString('base64');
   return sanitise(base64);
@@ -158,4 +158,8 @@ export function roomNameToMeeting(
       },
     };
   }
+}
+
+export function toBigInt32(value: string | bigint | number): bigint {
+  return BigInt(value) % BigInt(4294967296);
 }
