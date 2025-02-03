@@ -1,7 +1,7 @@
 export const idlFactory = ({ IDL }) => {
   const MessageId = IDL.Nat64;
   const Milliseconds = IDL.Nat64;
-  const UserId = CanisterId;
+  const UserId = IDL.Principal;
   const VideoCallType = IDL.Variant({
     Default: IDL.Null,
     Broadcast: IDL.Null,
