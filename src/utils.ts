@@ -14,7 +14,7 @@ export function newMessageId(): bigint {
 }
 
 function random64(): bigint {
-  const bytes = randomBytes(8); // 8 random bytes
+  const bytes = randomBytes(8);
   return BigInt.asUintN(64, BigInt('0x' + bytes.toString('hex')));
 }
 
@@ -80,7 +80,7 @@ function sanitise(base64: string): string {
 }
 
 export function channelIdToBase64(channelId: string): string {
-  const bigintVal = BigInt(channelId);
+  const bigintVal = toBigInt32(channelId);
   const buffer = toBufferBE(bigintVal, 16);
   const base64 = buffer.toString('base64');
   return sanitise(base64);
@@ -158,4 +158,8 @@ export function roomNameToMeeting(
       },
     };
   }
+}
+
+export function toBigInt32(value: string | bigint | number): bigint {
+  return BigInt(value) % BigInt(4294967296);
 }

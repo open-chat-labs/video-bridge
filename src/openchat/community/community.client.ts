@@ -4,7 +4,11 @@ import { CommunityService, idlFactory } from './candid/idl';
 import { Principal } from '@dfinity/principal';
 import { Identity } from '@dfinity/agent';
 import { ChannelMeeting, VideoCallType } from '../../types';
-import { DEFAULT_MAX_CALL_DURATION_MS, DIAMOND_MAX_CALL_DURATION_MS } from '../constants';
+import {
+  DEFAULT_MAX_CALL_DURATION_MS,
+  DIAMOND_MAX_CALL_DURATION_MS,
+} from '../constants';
+import { toBigInt32 } from 'src/utils';
 
 export class CommunityClient extends CandidService {
   private communityService: CommunityService;
@@ -34,13 +38,17 @@ export class CommunityClient extends CandidService {
     return this.handleResponse(
       this.communityService.start_video_call_v2({
         message_id: msgId,
-        channel_id: BigInt(channelId),
+        channel_id: toBigInt32(channelId),
         initiator: Principal.fromText(initiatorId),
         initiator_username: initiatorUsername,
         initiator_display_name: initiatorDisplayName
           ? [initiatorDisplayName]
           : [],
-        max_duration: [initiatorIsDiamond ? DIAMOND_MAX_CALL_DURATION_MS : DEFAULT_MAX_CALL_DURATION_MS],
+        max_duration: [
+          initiatorIsDiamond
+            ? DIAMOND_MAX_CALL_DURATION_MS
+            : DEFAULT_MAX_CALL_DURATION_MS,
+        ],
         call_type:
           callType === 'Broadcast' ? { Broadcast: null } : { Default: null },
       }),
@@ -63,16 +71,19 @@ export class CommunityClient extends CandidService {
   }
 
   meetingFinished(meeting: ChannelMeeting): Promise<ChannelMeeting> {
+    const args = {
+      channel_id: toBigInt32(meeting.chatId.channelId),
+      message_id: meeting.messageId,
+    };
     Logger.debug(
       'Sending meeting finished on community ',
       this.communityId,
       meeting,
+      args,
     );
+
     return this.handleResponse(
-      this.communityService.end_video_call_v2({
-        channel_id: BigInt(meeting.chatId.channelId),
-        message_id: meeting.messageId,
-      }),
+      this.communityService.end_video_call_v2(args),
       () => {
         // if we get *any* response here we consider it success
         // only an exception is a problem
