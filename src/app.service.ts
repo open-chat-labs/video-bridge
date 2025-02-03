@@ -148,6 +148,7 @@ export class AppService {
     roomId: string,
     userId: string,
     username: string,
+    startedBy?: string,
   ): unknown {
     const params = {
       properties: {
@@ -167,16 +168,18 @@ export class AppService {
       return params;
     }
 
+    const presenter = !joining || userId === startedBy;
+
     return {
       ...params,
       properties: {
         ...params.properties,
-        start_video_off: joining,
-        start_audio_off: joining,
+        start_video_off: !presenter,
+        start_audio_off: !presenter,
         permissions: {
-          canSend: !joining,
-          hasPresence: !joining,
-          canAdmin: !joining,
+          canSend: presenter,
+          hasPresence: presenter,
+          canAdmin: presenter,
         },
       },
     };
@@ -188,6 +191,7 @@ export class AppService {
     roomId: string,
     userId: string,
     username: string,
+    startedBy?: string,
   ): Promise<string> {
     const headers = this.getAuthHeaders();
     headers.append('Content-Type', 'application/json');
@@ -195,7 +199,14 @@ export class AppService {
       method: 'POST',
       headers,
       body: JSON.stringify(
-        this.getMeetingTokenParams(joining, callType, roomId, userId, username),
+        this.getMeetingTokenParams(
+          joining,
+          callType,
+          roomId,
+          userId,
+          username,
+          startedBy,
+        ),
       ),
     })
       .then((res) => {
@@ -252,13 +263,13 @@ export class AppService {
     initiatorUsername: string,
     initiatorDisplayname?: string,
     initiatorAvatarId?: bigint,
-  ): Promise<[bigint, boolean]> {
+  ): Promise<[bigint, InProgress | undefined]> {
     const inprog = await this.inprogressService.get(roomName);
     if (inprog) {
       Logger.debug(
         `Call in progress for room ${roomName} so we will be joining`,
       );
-      return [BigInt(inprog.messageId), true];
+      return [BigInt(inprog.messageId), inprog];
     } else {
       if (joining) {
         Logger.debug(
@@ -275,7 +286,7 @@ export class AppService {
           initiatorDisplayname,
           initiatorAvatarId,
         );
-        return [msgId, false];
+        return [msgId, undefined];
       }
     }
   }
@@ -349,7 +360,7 @@ export class AppService {
 
       const callType = this.callTypeFromRoom(room);
 
-      const [messageId, joining] = await this.sendStartMessageToOpenChat(
+      const [messageId, inProgress] = await this.sendStartMessageToOpenChat(
         roomName,
         callType,
         decoded.claimType === 'JoinVideoCall',
@@ -360,12 +371,13 @@ export class AppService {
         initiatorDisplayName,
         initiatorAvatarId,
       );
-      if (!joining) {
+      if (inProgress === undefined) {
         this.inprogressService.upsert({
           roomName,
           messageId: messageId.toString(),
           confirmed: false,
           expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 2), // expire this record in two hours just in case the meeting never starts
+          startedBy: decoded.userId,
         });
       }
       Logger.debug('Meeting start messageId ', messageId);
@@ -375,13 +387,14 @@ export class AppService {
         roomName,
         decoded.userId,
         initiatorUsername,
+        inProgress?.startedBy,
       );
 
       return {
         token,
         roomName,
         messageId,
-        joining,
+        joining: inProgress !== undefined,
       };
     } catch (err) {
       if (err instanceof NoMeetingInProgress) {
@@ -447,6 +460,7 @@ export class AppService {
             this.inprogressService.upsert({
               messageId: inprog.messageId,
               roomName: inprog.roomName,
+              startedBy: inprog.startedBy,
               confirmed: true,
             });
           } else {
