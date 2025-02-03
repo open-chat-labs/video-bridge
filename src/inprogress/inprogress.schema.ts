@@ -16,6 +16,9 @@ export class InProgress {
 
   @Prop()
   confirmed: boolean;
+
+  @Prop()
+  startedBy: string;
 }
 
 export const InProgressSchema = SchemaFactory.createForClass(InProgress).index(
