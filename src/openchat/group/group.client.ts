@@ -1,10 +1,13 @@
-import { Logger } from '@nestjs/common';
-import { CandidService } from '../candidService';
-import { GroupService, idlFactory } from './candid/idl';
-import { Principal } from '@dfinity/principal';
 import { Identity } from '@dfinity/agent';
+import { Principal } from '@dfinity/principal';
+import { Logger } from '@nestjs/common';
 import { GroupMeeting, VideoCallType } from '../../types';
-import { DEFAULT_MAX_CALL_DURATION_MS, DIAMOND_MAX_CALL_DURATION_MS } from '../constants';
+import { CandidService } from '../candidService';
+import {
+  DEFAULT_MAX_CALL_DURATION_MS,
+  DIAMOND_MAX_CALL_DURATION_MS,
+} from '../constants';
+import { GroupService, idlFactory } from './candid/idl';
 
 export class GroupClient extends CandidService {
   private groupService: GroupService;
@@ -38,7 +41,11 @@ export class GroupClient extends CandidService {
         initiator_display_name: initiatorDisplayName
           ? [initiatorDisplayName]
           : [],
-        max_duration: [initiatorIsDiamond ? DIAMOND_MAX_CALL_DURATION_MS : DEFAULT_MAX_CALL_DURATION_MS],
+        max_duration: [
+          initiatorIsDiamond
+            ? DIAMOND_MAX_CALL_DURATION_MS
+            : DEFAULT_MAX_CALL_DURATION_MS,
+        ],
         call_type:
           callType === 'Broadcast' ? { Broadcast: null } : { Default: null },
       }),

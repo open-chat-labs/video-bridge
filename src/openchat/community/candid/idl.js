@@ -3,6 +3,15 @@ export const idlFactory = ({ IDL }) => {
   const MessageId = IDL.Nat64;
   const Milliseconds = IDL.Nat64;
   const UserId = IDL.Principal;
+  const OCError = IDL.Tuple(IDL.Nat16, IDL.Opt(IDL.Text));
+  const StartVideoCallResponse = IDL.Variant({
+    Error: OCError,
+    Success: IDL.Null,
+  });
+  const EndVideoCallResponse = IDL.Variant({
+    Error: OCError,
+    Success: IDL.Null,
+  });
   const VideoCallType = IDL.Variant({
     Default: IDL.Null,
     Broadcast: IDL.Null,
@@ -10,11 +19,6 @@ export const idlFactory = ({ IDL }) => {
   const EndVideoCallArgs = IDL.Record({
     channel_id: ChannelId,
     message_id: MessageId,
-  });
-  const EndVideoCallResponse = IDL.Variant({
-    AlreadyEnded: IDL.Null,
-    MessageNotFound: IDL.Null,
-    Success: IDL.Null,
   });
   const StartVideoCallArgs = IDL.Record({
     initiator_username: IDL.Text,
@@ -24,10 +28,6 @@ export const idlFactory = ({ IDL }) => {
     initiator_display_name: IDL.Opt(IDL.Text),
     message_id: MessageId,
     call_type: VideoCallType,
-  });
-  const StartVideoCallResponse = IDL.Variant({
-    NotAuthorized: IDL.Null,
-    Success: IDL.Null,
   });
   return IDL.Service({
     end_video_call_v2: IDL.Func([EndVideoCallArgs], [EndVideoCallResponse], []),
