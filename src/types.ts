@@ -14,7 +14,13 @@ export type ApiJoinClaims = {
   chat_id: ApiChatIdentifier;
 };
 
-export type ApiClaims = ApiStartClaims | ApiJoinClaims;
+export type ApiMarkCallEndedClaims = {
+  claim_type: 'MarkVideoCallAsEnded';
+  user_id: string;
+  chat_id: ApiChatIdentifier;
+};
+
+export type ApiClaims = ApiStartClaims | ApiJoinClaims | ApiMarkCallEndedClaims;
 
 export type ApiTokenPayload = ApiClaims & {
   exp: number;
@@ -22,7 +28,13 @@ export type ApiTokenPayload = ApiClaims & {
 
 export type VideoCallType = 'Default' | 'Broadcast';
 
-export type TokenPayload = StartClaims | JoinClaims;
+export type TokenPayload = StartClaims | JoinClaims | EndCallClaims;
+
+export type EndCallClaims = {
+  claimType: 'MarkVideoCallAsEnded';
+  userId: string;
+  chatId: ChatIdentifier;
+};
 
 export type StartClaims = {
   claimType: 'StartVideoCall';
@@ -57,6 +69,12 @@ export type ApiChannelIdentifier = {
 
 export function mapTokenPayload(token: ApiTokenPayload): TokenPayload {
   switch (token.claim_type) {
+    case 'MarkVideoCallAsEnded':
+      return {
+        claimType: token.claim_type,
+        userId: token.user_id,
+        chatId: mapChatId(token.chat_id),
+      };
     case 'StartVideoCall':
       return {
         claimType: token.claim_type,
