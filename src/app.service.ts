@@ -1,10 +1,18 @@
+import { DailyRoomInfo } from '@daily-co/daily-js';
 import {
+  BadRequestException,
   Injectable,
   InternalServerErrorException,
   Logger,
   UnauthorizedException,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { Interval } from '@nestjs/schedule';
 import * as jwt from 'jsonwebtoken';
+import { InProgress } from './inprogress/inprogress.schema';
+import { InProgressService } from './inprogress/inprogress.service';
+import { NoMeetingInProgress } from './openchat/error';
+import { OpenChatService } from './openchat/openchat.service';
 import {
   AccessTokenResponse,
   ApiTokenPayload,
@@ -15,14 +23,7 @@ import {
   VideoCallType,
   mapTokenPayload,
 } from './types';
-import { ConfigService } from '@nestjs/config';
-import { DailyRoomInfo } from '@daily-co/daily-js';
-import { Interval } from '@nestjs/schedule';
-import { OpenChatService } from './openchat/openchat.service';
 import { chatIdToRoomName, roomNameToMeeting } from './utils';
-import { InProgressService } from './inprogress/inprogress.service';
-import { InProgress } from './inprogress/inprogress.schema';
-import { NoMeetingInProgress } from './openchat/error';
 
 @Injectable()
 export class AppService {
@@ -343,6 +344,11 @@ export class AppService {
   ): Promise<AccessTokenResponse> {
     try {
       const decoded = this.decodeJwt(authToken);
+      if (decoded.claimType === 'MarkVideoCallAsEnded') {
+        throw new BadRequestException(
+          `Unexpected auth token type of ${decoded.claimType}`,
+        );
+      }
       const roomName = this.chatIdToRoomName(decoded.userId, decoded.chatId);
 
       let room = await this.roomExists(roomName);
