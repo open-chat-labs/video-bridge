@@ -20,6 +20,7 @@ export interface StartVideoCallArgs {
   initiator_display_name: [] | [string];
   message_id: MessageId;
   call_type: VideoCallType;
+  audio_only: [] | [boolean];
 }
 
 export type UserId = CanisterId;

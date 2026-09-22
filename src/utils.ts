@@ -5,6 +5,7 @@ import {
   DirectChatIdentifier,
   GroupChatIdentifier,
   Meeting,
+  VideoCallType,
 } from './types';
 import { toBigIntBE, toBufferBE } from 'bigint-buffer';
 import { randomBytes } from 'crypto';
@@ -162,4 +163,81 @@ export function roomNameToMeeting(
 
 export function toBigInt32(value: string | bigint | number): bigint {
   return BigInt(value) % BigInt(4294967296);
+}
+
+// The parameters of the Daily meeting token for one participant of a call
+export function meetingTokenParams(
+  joining: boolean,
+  callType: VideoCallType,
+  roomId: string,
+  userId: string,
+  username: string,
+  startedBy?: string,
+): unknown {
+  const params = {
+    properties: {
+      room_name: roomId,
+      user_name: username,
+      user_id: userId,
+      is_owner: !joining,
+      permissions: {
+        canSend: true,
+        hasPresence: true,
+        canAdmin: !joining,
+      },
+    },
+  };
+
+  switch (callType) {
+    case 'Default':
+      return params;
+
+    // An audio call stays an audio call: nobody in it can send a camera or a screen share,
+    // whatever their client asks for
+    case 'Audio':
+      return {
+        ...params,
+        properties: {
+          ...params.properties,
+          start_video_off: true,
+          permissions: {
+            ...params.properties.permissions,
+            canSend: ['audio'],
+          },
+        },
+      };
+
+    case 'Broadcast': {
+      const presenter = !joining || userId === startedBy;
+
+      return {
+        ...params,
+        properties: {
+          ...params.properties,
+          start_video_off: !presenter,
+          start_audio_off: !presenter,
+          permissions: {
+            canSend: presenter,
+            hasPresence: presenter,
+            canAdmin: presenter,
+          },
+        },
+      };
+    }
+  }
+}
+
+// The type of the call a token is being issued for. A call that is already running has the
+// type on its record. A record written before audio calls existed has none, and neither has a
+// Daily room, so both fall back to what the room config says, which is never audio. Only a
+// request that starts the call can make it an audio call, and a broadcast room never becomes one.
+export function callTypeForToken(
+  roomType: VideoCallType,
+  inProgress?: { callType?: VideoCallType },
+  requested?: VideoCallType,
+): VideoCallType {
+  if (inProgress !== undefined) {
+    return inProgress.callType ?? roomType;
+  }
+  return roomType === 'Default' && requested === 'Audio' ? 'Audio' : roomType;
 }

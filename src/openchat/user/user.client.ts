@@ -1,7 +1,11 @@
 import { Identity } from '@dfinity/agent';
 import { Principal } from '@dfinity/principal';
 import { Logger } from '@nestjs/common';
-import { DirectMeeting, VideoCallType } from '../../types';
+import {
+  DirectMeeting,
+  VideoCallType,
+  videoCallTypeToApi,
+} from '../../types';
 import { CandidService } from '../candidService';
 import {
   DEFAULT_MAX_CALL_DURATION_MS,
@@ -51,8 +55,7 @@ export class UserClient extends CandidService {
             ? DIAMOND_MAX_CALL_DURATION_MS
             : DEFAULT_MAX_CALL_DURATION_MS,
         ],
-        call_type:
-          callType === 'Broadcast' ? { Broadcast: null } : { Default: null },
+        ...videoCallTypeToApi(callType),
       }),
       (res) => {
         if (!('Success' in res)) {

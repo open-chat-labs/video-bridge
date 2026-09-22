@@ -2,7 +2,9 @@ import { IsNotEmpty, IsObject } from 'class-validator';
 
 export type ApiStartClaims = {
   claim_type: 'StartVideoCall';
-  call_type: VideoCallType;
+  call_type: ApiVideoCallType;
+  // absent in a token from a local user index that predates audio calls
+  audio_only?: boolean;
   user_id: string;
   chat_id: ApiChatIdentifier;
   is_diamond: boolean;
@@ -26,7 +28,31 @@ export type ApiTokenPayload = ApiClaims & {
   exp: number;
 };
 
-export type VideoCallType = 'Default' | 'Broadcast';
+// How OpenChat names a call's type on the wire. An audio call travels as 'Default' with a
+// separate audio only flag, so that clients which predate audio calls still decode it.
+export type ApiVideoCallType = 'Default' | 'Broadcast';
+
+// 'Default' is a video call. The wire pair can say "audio only broadcast", which does not
+// exist, so it is converted to this type as it arrives and only this type is passed around.
+export type VideoCallType = ApiVideoCallType | 'Audio';
+
+export function videoCallTypeFromApi(
+  callType: ApiVideoCallType,
+  audioOnly?: boolean,
+): VideoCallType {
+  return callType === 'Default' && audioOnly === true ? 'Audio' : callType;
+}
+
+export function videoCallTypeToApi(callType: VideoCallType): {
+  call_type: { Default: null } | { Broadcast: null };
+  audio_only: [] | [boolean];
+} {
+  return {
+    call_type:
+      callType === 'Broadcast' ? { Broadcast: null } : { Default: null },
+    audio_only: callType === 'Audio' ? [true] : [],
+  };
+}
 
 export type TokenPayload = StartClaims | JoinClaims | EndCallClaims;
 
@@ -80,7 +106,7 @@ export function mapTokenPayload(token: ApiTokenPayload): TokenPayload {
         claimType: token.claim_type,
         userId: token.user_id,
         chatId: mapChatId(token.chat_id),
-        callType: token.call_type,
+        callType: videoCallTypeFromApi(token.call_type, token.audio_only),
         isDiamond: token.is_diamond,
       };
     case 'JoinVideoCall':
