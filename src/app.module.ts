@@ -4,7 +4,6 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { ScheduleModule } from '@nestjs/schedule';
 import { OpenChatService } from './openchat/openchat.service';
-import { HttpModule } from '@nestjs/axios';
 import { MongooseModule } from '@nestjs/mongoose';
 import { InProgressModule } from './inprogress/inprogress.module';
 
@@ -20,7 +19,6 @@ import { InProgressModule } from './inprogress/inprogress.module';
       }),
     }),
     ScheduleModule.forRoot(),
-    HttpModule,
     InProgressModule,
   ],
   controllers: [AppController],

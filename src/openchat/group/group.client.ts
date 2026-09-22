@@ -1,11 +1,7 @@
 import { Identity } from '@dfinity/agent';
 import { Principal } from '@dfinity/principal';
 import { Logger } from '@nestjs/common';
-import {
-  GroupMeeting,
-  VideoCallType,
-  videoCallTypeToApi,
-} from '../../types';
+import { GroupMeeting, VideoCallType, videoCallTypeToApi } from '../../types';
 import { CandidService } from '../candidService';
 import {
   DEFAULT_MAX_CALL_DURATION_MS,
