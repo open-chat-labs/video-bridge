@@ -7,11 +7,13 @@ export type EndVideoCallResponse = { Error: OCError } | { Success: null };
 
 export interface EndVideoCallArgs {
   user_id: UserId;
+  them: UserId;
   message_id: MessageId;
 }
 export type MessageId = bigint;
 export type Milliseconds = bigint;
 export interface StartVideoCallArgs {
+  user_id: UserId;
   initiator_username: string;
   initiator: UserId;
   initiator_avatar_id: [] | [bigint];

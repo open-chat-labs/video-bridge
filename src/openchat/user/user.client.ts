@@ -36,6 +36,9 @@ export class UserClient extends CandidService {
   ): Promise<bigint> {
     return this.handleResponse(
       this.userService.start_video_call_v2({
+        // open-chat #9401 added the target user to every User canister endpoint that is not
+        // owner only. A user canister from before that change ignores the extra field.
+        user_id: Principal.fromText(this.userId),
         message_id: msgId,
         initiator: Principal.fromText(initiatorId),
         initiator_username: initiatorUsername,
@@ -77,7 +80,13 @@ export class UserClient extends CandidService {
     Logger.debug(msg);
     return this.handleResponse(
       this.userService.end_video_call_v2({
+        // open-chat #9401 renamed the other user from `user_id` to `them` and made `user_id`
+        // the target user. User canisters upgrade over days, so this has to work on both
+        // sides of that change: a canister from before it reads the other user from
+        // `user_id`, and one from after it reads `them` and does not read `user_id` at all.
+        // Once every user canister is past #9401 `user_id` should become this.userId.
         user_id: Principal.fromText(otherUser),
+        them: Principal.fromText(otherUser),
         message_id: meeting.messageId,
       }),
       () => {

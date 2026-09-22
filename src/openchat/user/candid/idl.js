@@ -17,9 +17,11 @@ export const idlFactory = ({ IDL }) => {
   });
   const EndVideoCallArgs = IDL.Record({
     user_id: UserId,
+    them: UserId,
     message_id: MessageId,
   });
   const StartVideoCallArgs = IDL.Record({
+    user_id: UserId,
     initiator_username: IDL.Text,
     initiator: UserId,
     initiator_avatar_id: IDL.Opt(IDL.Nat),
