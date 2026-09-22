@@ -7,11 +7,13 @@ export type EndVideoCallResponse = { Error: OCError } | { Success: null };
 
 export interface EndVideoCallArgs {
   user_id: UserId;
+  them: UserId;
   message_id: MessageId;
 }
 export type MessageId = bigint;
 export type Milliseconds = bigint;
 export interface StartVideoCallArgs {
+  user_id: UserId;
   initiator_username: string;
   initiator: UserId;
   initiator_avatar_id: [] | [bigint];
@@ -19,6 +21,7 @@ export interface StartVideoCallArgs {
   initiator_display_name: [] | [string];
   message_id: MessageId;
   call_type: VideoCallType;
+  audio_only: [] | [boolean];
 }
 export type UserId = CanisterId;
 export type VideoCallType = { Default: null } | { Broadcast: null };

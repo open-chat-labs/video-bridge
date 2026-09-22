@@ -28,6 +28,7 @@ export const idlFactory = ({ IDL }) => {
     initiator_display_name: IDL.Opt(IDL.Text),
     message_id: MessageId,
     call_type: VideoCallType,
+    audio_only: IDL.Opt(IDL.Bool),
   });
   return IDL.Service({
     end_video_call_v2: IDL.Func([EndVideoCallArgs], [EndVideoCallResponse], []),

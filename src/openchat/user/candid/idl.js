@@ -17,9 +17,11 @@ export const idlFactory = ({ IDL }) => {
   });
   const EndVideoCallArgs = IDL.Record({
     user_id: UserId,
+    them: UserId,
     message_id: MessageId,
   });
   const StartVideoCallArgs = IDL.Record({
+    user_id: UserId,
     initiator_username: IDL.Text,
     initiator: UserId,
     initiator_avatar_id: IDL.Opt(IDL.Nat),
@@ -27,6 +29,7 @@ export const idlFactory = ({ IDL }) => {
     initiator_display_name: IDL.Opt(IDL.Text),
     message_id: MessageId,
     call_type: VideoCallType,
+    audio_only: IDL.Opt(IDL.Bool),
   });
   return IDL.Service({
     end_video_call_v2: IDL.Func([EndVideoCallArgs], [EndVideoCallResponse], []),

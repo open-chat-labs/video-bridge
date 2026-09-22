@@ -23,7 +23,12 @@ import {
   VideoCallType,
   mapTokenPayload,
 } from './types';
-import { chatIdToRoomName, roomNameToMeeting } from './utils';
+import {
+  callTypeForToken,
+  chatIdToRoomName,
+  meetingTokenParams,
+  roomNameToMeeting,
+} from './utils';
 
 @Injectable()
 export class AppService {
@@ -143,49 +148,6 @@ export class AppService {
     });
   }
 
-  private getMeetingTokenParams(
-    joining: boolean,
-    callType: VideoCallType,
-    roomId: string,
-    userId: string,
-    username: string,
-    startedBy?: string,
-  ): unknown {
-    const params = {
-      properties: {
-        room_name: roomId,
-        user_name: username,
-        user_id: userId,
-        is_owner: !joining,
-        permissions: {
-          canSend: true,
-          hasPresence: true,
-          canAdmin: !joining,
-        },
-      },
-    };
-
-    if (callType === 'Default') {
-      return params;
-    }
-
-    const presenter = !joining || userId === startedBy;
-
-    return {
-      ...params,
-      properties: {
-        ...params.properties,
-        start_video_off: !presenter,
-        start_audio_off: !presenter,
-        permissions: {
-          canSend: presenter,
-          hasPresence: presenter,
-          canAdmin: presenter,
-        },
-      },
-    };
-  }
-
   private getMeetingToken(
     joining: boolean,
     callType: VideoCallType,
@@ -200,7 +162,7 @@ export class AppService {
       method: 'POST',
       headers,
       body: JSON.stringify(
-        this.getMeetingTokenParams(
+        meetingTokenParams(
           joining,
           callType,
           roomId,
@@ -364,11 +326,13 @@ export class AppService {
         Logger.debug('We created the room: ', room);
       }
 
-      const callType = this.callTypeFromRoom(room);
+      const roomType = this.callTypeFromRoom(room);
+      const requested =
+        decoded.claimType === 'StartVideoCall' ? decoded.callType : undefined;
 
       const [messageId, inProgress] = await this.sendStartMessageToOpenChat(
         roomName,
-        callType,
+        callTypeForToken(roomType, undefined, requested),
         decoded.claimType === 'JoinVideoCall',
         decoded.chatId,
         decoded.userId,
@@ -377,6 +341,7 @@ export class AppService {
         initiatorDisplayName,
         initiatorAvatarId,
       );
+      const callType = callTypeForToken(roomType, inProgress, requested);
       if (inProgress === undefined) {
         this.inprogressService.upsert({
           roomName,
@@ -384,6 +349,7 @@ export class AppService {
           confirmed: false,
           expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 2), // expire this record in two hours just in case the meeting never starts
           startedBy: decoded.userId,
+          callType,
         });
       }
       Logger.debug('Meeting start messageId ', messageId);

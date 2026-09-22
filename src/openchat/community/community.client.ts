@@ -3,7 +3,11 @@ import { CandidService } from '../candidService';
 import { CommunityService, idlFactory } from './candid/idl';
 import { Principal } from '@dfinity/principal';
 import { Identity } from '@dfinity/agent';
-import { ChannelMeeting, VideoCallType } from '../../types';
+import {
+  ChannelMeeting,
+  VideoCallType,
+  videoCallTypeToApi,
+} from '../../types';
 import {
   DEFAULT_MAX_CALL_DURATION_MS,
   DIAMOND_MAX_CALL_DURATION_MS,
@@ -49,8 +53,7 @@ export class CommunityClient extends CandidService {
             ? DIAMOND_MAX_CALL_DURATION_MS
             : DEFAULT_MAX_CALL_DURATION_MS,
         ],
-        call_type:
-          callType === 'Broadcast' ? { Broadcast: null } : { Default: null },
+        ...videoCallTypeToApi(callType),
       }),
       (res) => {
         if (!('Success' in res)) {

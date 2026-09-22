@@ -1,5 +1,6 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { HydratedDocument } from 'mongoose';
+import { VideoCallType } from '../types';
 
 export type InProgressDocument = HydratedDocument<InProgress>;
 
@@ -19,6 +20,10 @@ export class InProgress {
 
   @Prop()
   startedBy: string;
+
+  // absent on a record written before audio calls existed
+  @Prop()
+  callType?: VideoCallType;
 }
 
 export const InProgressSchema = SchemaFactory.createForClass(InProgress).index(
