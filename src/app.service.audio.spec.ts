@@ -71,7 +71,7 @@ function setup() {
   };
 
   let room: { config: Record<string, unknown> } | undefined = undefined;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
   const tokenRequests: any[] = [];
   global.fetch = jest.fn(async (url: string, init?: RequestInit) => {
     const ok = (body: unknown) =>
@@ -90,11 +90,10 @@ function setup() {
   }) as unknown as typeof fetch;
 
   const service = new AppService(
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     inprogress as any,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     config as any,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     openChat as any,
   );
   return { service, records, started, tokenRequests };

@@ -24,12 +24,14 @@ export class AppController {
   ) {}
 
   /**
-   * This returns the internal state of the video bridge and indicates which meetings it currently
-   * thinks are in progress
+   * How many meetings the bridge currently thinks are in progress. A health check, nothing more:
+   * this endpoint is unauthenticated and room names encode chat and user ids, so it never lists
+   * them.
    */
   @Get('meetings')
-  getMeetings() {
-    return this.appService.getMeetings();
+  async getMeetings(): Promise<{ inProgress: number }> {
+    const meetings = await this.appService.getMeetings();
+    return { inProgress: meetings.length };
   }
 
   @Post('end_meeting')
@@ -64,23 +66,33 @@ export class AppController {
       auth,
       initiatorUsername,
       initiatorDisplayname,
-      initiatorAvatarId ? BigInt(initiatorAvatarId) : undefined,
+      parseAvatarId(initiatorAvatarId),
     );
   }
 
-  /** Verify the event signature so we are sure it came from daily */
+  /**
+   * Verify the event signature so we are sure it came from Daily. The comparison is constant
+   * time, and a signature older than the replay window is refused however valid it is.
+   */
   private isValid(
     timestamp: string,
     signatureHeader: string,
     body: MeetingEndedEvent,
   ): boolean {
     try {
+      if (!isFresh(timestamp)) {
+        return false;
+      }
       const secret = this.configService.get<string>('DAILY_HOOK_HMAC');
       const signature = timestamp + '.' + JSON.stringify(body);
       const base64DecodedSecret = Buffer.from(secret, 'base64');
       const hmac = crypto.createHmac('sha256', base64DecodedSecret);
-      const computed = hmac.update(signature).digest('base64');
-      return computed === signatureHeader;
+      const computed = hmac.update(signature).digest();
+      const supplied = Buffer.from(signatureHeader ?? '', 'base64');
+      return (
+        computed.length === supplied.length &&
+        crypto.timingSafeEqual(computed, supplied)
+      );
     } catch (err) {
       Logger.error(
         'There was an error trying to verify the daily hook signature: ',
@@ -114,4 +126,26 @@ export class AppController {
       Logger.error('Hook received from daily js cannot be verified');
     }
   }
+}
+
+// Daily sends the webhook timestamp as seconds since the epoch
+const HOOK_REPLAY_WINDOW_SECONDS = 5 * 60;
+
+export function isFresh(
+  timestamp: string,
+  nowSeconds: number = Math.floor(Date.now() / 1000),
+): boolean {
+  const sent = Number(timestamp);
+  return (
+    Number.isInteger(sent) &&
+    Math.abs(nowSeconds - sent) <= HOOK_REPLAY_WINDOW_SECONDS
+  );
+}
+
+// An avatar id is an unsigned 128 bit integer written in decimal. Anything else is ignored
+// rather than thrown at BigInt, which would turn a bad query string into a 500.
+export function parseAvatarId(value: string | undefined): bigint | undefined {
+  return value !== undefined && /^\d{1,39}$/.test(value)
+    ? BigInt(value)
+    : undefined;
 }

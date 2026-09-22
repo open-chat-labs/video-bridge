@@ -1,5 +1,16 @@
 import { IsNotEmpty, IsObject } from 'class-validator';
 
+// The part of a Daily room, as returned by the REST API, that the bridge reads
+export type DailyRoomInfo = {
+  id: string;
+  name: string;
+  url: string;
+  config: {
+    enable_hidden_participants?: boolean;
+    [key: string]: unknown;
+  };
+};
+
 export type ApiStartClaims = {
   claim_type: 'StartVideoCall';
   call_type: ApiVideoCallType;
@@ -77,9 +88,7 @@ export type JoinClaims = {
 };
 
 export type ApiChatIdentifier =
-  | ApiGroupChatIdentifier
-  | ApiDirectChatIdentifier
-  | ApiChannelIdentifier;
+  ApiGroupChatIdentifier | ApiDirectChatIdentifier | ApiChannelIdentifier;
 
 export type ApiGroupChatIdentifier = {
   Group: string;

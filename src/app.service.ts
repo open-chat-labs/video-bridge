@@ -1,4 +1,3 @@
-import { DailyRoomInfo } from '@daily-co/daily-js';
 import {
   BadRequestException,
   Injectable,
@@ -22,6 +21,7 @@ import {
   TokenPayload,
   VideoCallType,
   mapTokenPayload,
+  DailyRoomInfo,
 } from './types';
 import {
   callTypeForToken,
@@ -265,20 +265,18 @@ export class AppService {
   private decodeJwt(token: string): TokenPayload {
     const rawKey = this.configService.get('OC_PUBLIC');
     const publicKey = rawKey.replace(/\\n/g, '\n');
-    let decoded: TokenPayload | undefined = undefined;
     try {
-      decoded = mapTokenPayload(
+      return mapTokenPayload(
         jwt.verify(token, publicKey, {
           algorithms: ['ES256'],
         }) as ApiTokenPayload,
-      ) as TokenPayload;
+      );
     } catch (err) {
       Logger.error('Error verifying access token: ', err);
       throw new UnauthorizedException(
         `Unable to verify supplied access token: ${err}`,
       );
     }
-    return decoded;
   }
 
   async endMeeting(authToken: string): Promise<void> {

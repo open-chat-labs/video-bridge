@@ -30,7 +30,7 @@ export class OpenChatService {
 
     // TODO - this is all fire and forget but we do need to add a retry
     switch (chatId.kind) {
-      case 'channel':
+      case 'channel': {
         const communityClient = this.getCommunityClient(chatId.communityId);
         communityClient.sendVideoCallStartedMessage(
           callType,
@@ -42,7 +42,8 @@ export class OpenChatService {
           initiatorDisplayname,
         );
         break;
-      case 'group_chat':
+      }
+      case 'group_chat': {
         const groupClient = this.getGroupClient(chatId.groupId);
         groupClient.sendVideoCallStartedMessage(
           callType,
@@ -53,7 +54,8 @@ export class OpenChatService {
           initiatorDisplayname,
         );
         break;
-      case 'direct_chat':
+      }
+      case 'direct_chat': {
         const otherUserClient = this.getUserClient(chatId.userId);
         otherUserClient.sendVideoCallStartedMessage(
           callType,
@@ -65,6 +67,7 @@ export class OpenChatService {
           initiatorAvatarId,
         );
         break;
+      }
       default:
         throw new Error('not implemented');
     }

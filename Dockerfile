@@ -1,31 +1,31 @@
 # build stage
-FROM node:20-alpine as build
+FROM node:22-alpine AS build
 
 WORKDIR /video_bridge
 
-COPY package*.json .
+COPY package*.json ./
 
-RUN npm install
+RUN npm ci
 
-COPY . . 
+COPY . .
 
 RUN npm run build
 
 # prod stage
-FROM node:20-alpine
+FROM node:22-alpine
 
 WORKDIR /video_bridge
 
 ARG NODE_ENV=production
 ENV NODE_ENV=${NODE_ENV}
 
+COPY package*.json ./
+
+RUN npm ci --omit=dev && npm cache clean --force && rm package*.json
+
 COPY --from=build /video_bridge/dist ./dist
 
-COPY package*.json  .
-
-RUN npm install --only=production
-
-RUN rm package*.json
+USER node
 
 EXPOSE 5050
 
