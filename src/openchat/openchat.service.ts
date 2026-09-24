@@ -6,6 +6,7 @@ import { GroupClient } from './group/group.client';
 import { Secp256k1KeyIdentity } from '@dfinity/identity-secp256k1';
 import { Identity } from '@dfinity/agent';
 import { UserClient } from './user/user.client';
+import { LocalUserIndexClient } from './local_user_index/local_user_index.client';
 import { CommunityClient } from './community/community.client';
 
 @Injectable()
@@ -112,6 +113,28 @@ export class OpenChatService {
       Logger.error('Unable to finish all meetings: ', results.errors);
     }
     return results.success;
+  }
+
+  // A user declined a call: their local user index stops the ring on their other devices.
+  callDeclined(
+    localUserIndex: string,
+    userId: string,
+    chatId: ChatIdentifier,
+    messageId: bigint,
+  ): Promise<void> {
+    return this.getLocalUserIndexClient(localUserIndex).callDeclined(
+      userId,
+      chatId,
+      messageId,
+    );
+  }
+
+  private getLocalUserIndexClient(canisterId: string): LocalUserIndexClient {
+    return new LocalUserIndexClient(
+      this._identity as unknown as Identity,
+      canisterId,
+      this.configService.get('IC_URL'),
+    );
   }
 
   private getUserClient(userId: string): UserClient {
