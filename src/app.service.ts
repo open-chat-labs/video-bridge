@@ -3,6 +3,7 @@ import {
   Injectable,
   InternalServerErrorException,
   Logger,
+  NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -281,6 +282,11 @@ export class AppService {
 
   async endMeeting(authToken: string): Promise<void> {
     const decoded = this.decodeJwt(authToken);
+    if (decoded.claimType !== 'MarkVideoCallAsEnded') {
+      throw new BadRequestException(
+        `Unexpected auth token type of ${decoded.claimType}`,
+      );
+    }
     const roomName = this.chatIdToRoomName(decoded.userId, decoded.chatId);
     const inprog = await this.inprogressService.get(roomName);
     if (inprog) {
@@ -288,6 +294,51 @@ export class AppService {
         this.roomNameToMeeting(roomName, inprog.messageId),
       ]);
     }
+  }
+
+  // A decline, from a running client with the token it would join with, or from a phone
+  // whose app is not running with the decline token from its ring push. A direct call
+  // ends for both sides through the ordinary finish path; a group call carries on and the
+  // decliner's local user index stops the ring on their other devices. Nothing records
+  // that anyone declined.
+  async declineMeeting(authToken: string): Promise<void> {
+    const decoded = this.decodeJwt(authToken);
+    if (
+      decoded.claimType !== 'JoinVideoCall' &&
+      decoded.claimType !== 'DeclineVideoCall'
+    ) {
+      throw new BadRequestException(
+        `Unexpected auth token type of ${decoded.claimType}`,
+      );
+    }
+    const roomName = this.chatIdToRoomName(decoded.userId, decoded.chatId);
+    const inprog = await this.inprogressService.get(roomName);
+    if (inprog === undefined) {
+      throw new NotFoundException('No call in progress');
+    }
+    if (
+      decoded.claimType === 'DeclineVideoCall' &&
+      decoded.messageId !== BigInt(inprog.messageId)
+    ) {
+      throw new BadRequestException('The token names another call');
+    }
+    if (decoded.chatId.kind === 'direct_chat') {
+      this.processFinishedMeetings([
+        this.roomNameToMeeting(roomName, inprog.messageId),
+      ]);
+      return;
+    }
+    if (decoded.localUserIndex === undefined) {
+      throw new BadRequestException(
+        'The token does not name a local user index',
+      );
+    }
+    await this.openChat.callDeclined(
+      decoded.localUserIndex,
+      decoded.userId,
+      decoded.chatId,
+      BigInt(inprog.messageId),
+    );
   }
 
   private callTypeFromRoom(room: DailyRoomInfo): VideoCallType {
@@ -304,7 +355,10 @@ export class AppService {
   ): Promise<AccessTokenResponse> {
     try {
       const decoded = this.decodeJwt(authToken);
-      if (decoded.claimType === 'MarkVideoCallAsEnded') {
+      if (
+        decoded.claimType !== 'StartVideoCall' &&
+        decoded.claimType !== 'JoinVideoCall'
+      ) {
         throw new BadRequestException(
           `Unexpected auth token type of ${decoded.claimType}`,
         );

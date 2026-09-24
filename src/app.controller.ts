@@ -44,6 +44,19 @@ export class AppController {
     return this.appService.endMeeting(auth);
   }
 
+  @Post('decline')
+  @HttpCode(204)
+  declineMeeting(
+    @Headers('x-auth-jwt') auth: string | undefined,
+  ): Promise<void> {
+    if (auth === undefined) {
+      throw new UnauthorizedException(
+        'You must provide an OpenChat authorisation jwt or a decline token to decline the call',
+      );
+    }
+    return this.appService.declineMeeting(auth);
+  }
+
   @Get('meeting_access_token')
   getAccessToken(
     @Headers('x-auth-jwt') auth: string | undefined,
