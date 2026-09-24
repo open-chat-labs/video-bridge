@@ -65,7 +65,7 @@ function endToken(chat_id: unknown, user_id = CALLEE) {
   return sign({ claim_type: 'MarkVideoCallAsEnded', user_id, chat_id });
 }
 
-function setup() {
+function setup(present: string[] = [], presenceDown = false) {
   const records = new Map<string, CreateInProgressDto>();
   const inprogress = {
     get: async (roomName: string) => records.get(roomName),
@@ -97,8 +97,20 @@ function setup() {
       declined.push({ lui, userId, chatId, messageId });
     },
   };
-  // room deletion on the finish path
-  global.fetch = jest.fn(async () => ({ ok: true }) as Response);
+  // room presence for the decline check; room deletion on the finish path
+  global.fetch = jest.fn(async (url: string) => {
+    if (url.endsWith('/presence')) {
+      if (presenceDown) return { ok: false, status: 500 } as Response;
+      return {
+        ok: true,
+        json: async () => ({
+          total_count: present.length,
+          data: present.map((userId) => ({ userId })),
+        }),
+      } as Response;
+    }
+    return { ok: true } as Response;
+  }) as unknown as typeof fetch;
 
   const service = new AppService(
     inprogress as any,
@@ -257,6 +269,44 @@ describe('declining a call (open-chat #9534)', () => {
       service.declineMeeting(joinToken(groupChat(), CALLEE, false)),
     ).rejects.toThrow('local user index');
     expect(declined).toEqual([]);
+  });
+
+  test('invariant 13: a decline from a user who is in the call ends nothing', async () => {
+    const { service, records, finished, declined } = setup([CALLER, CALLEE]);
+    records.set(DIRECT_ROOM, record(DIRECT_ROOM, CALLER));
+    records.set(GROUP_ROOM, record(GROUP_ROOM, CALLER));
+
+    // the stale web ring after answering on the phone, with a join token
+    await expect(
+      service.declineMeeting(joinToken(directChat(CALLER), CALLEE, false)),
+    ).rejects.toThrow('in the call');
+    // and the phone's decline racing the answer elsewhere, with a decline token
+    await expect(
+      service.declineMeeting(declineToken(directChat(CALLER))),
+    ).rejects.toThrow('in the call');
+    await expect(
+      service.declineMeeting(declineToken(groupChat())),
+    ).rejects.toThrow('in the call');
+
+    expect(finished).toEqual([]);
+    expect(declined).toEqual([]);
+    expect(records.has(DIRECT_ROOM)).toBe(true);
+    // the caller alone in the room is the ordinary case and the decline goes through
+    const alone = setup([CALLER]);
+    alone.records.set(DIRECT_ROOM, record(DIRECT_ROOM, CALLER));
+    await alone.service.declineMeeting(declineToken(directChat(CALLER)));
+    expect(alone.finished).toHaveLength(1);
+  });
+
+  test('invariant 13: when presence cannot be read the decline is refused rather than trusted', async () => {
+    const { service, records, finished, declined } = setup([], true);
+    records.set(DIRECT_ROOM, record(DIRECT_ROOM, CALLER));
+    await expect(
+      service.declineMeeting(declineToken(directChat(CALLER))),
+    ).rejects.toThrow('Unable to read who is in the call');
+    expect(finished).toEqual([]);
+    expect(declined).toEqual([]);
+    expect(records.has(DIRECT_ROOM)).toBe(true);
   });
 
   test('a decline for a call that is not running is a 404 and changes nothing', async () => {
