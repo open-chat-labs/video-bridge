@@ -31,8 +31,18 @@ function sign(claims: Record<string, unknown>): string {
   return jwt.sign(claims, privateKey, { algorithm: 'ES256', expiresIn: 60 });
 }
 
-const joinToken = (user_id = PHONE) =>
-  sign({ claim_type: 'JoinVideoCall', user_id, chat_id: { Group: GROUP } });
+const participantToken = (user_id = PHONE) =>
+  sign({
+    claim_type: 'VideoCallParticipant',
+    user_id,
+    chat_id: { Group: GROUP },
+  });
+const joinToken = () =>
+  sign({
+    claim_type: 'JoinVideoCall',
+    user_id: PHONE,
+    chat_id: { Group: GROUP },
+  });
 const endToken = () =>
   sign({
     claim_type: 'MarkVideoCallAsEnded',
@@ -115,14 +125,14 @@ describe('leaving a call natively (open-chat #9559 invariant 2)', () => {
     });
     records.set(ROOM, record());
 
-    await service.leaveMeeting(joinToken());
+    await service.leaveMeeting(participantToken());
 
     expect(ejected).toEqual([{ room: ROOM, ids: ['p-1'] }]);
     expect(finished).toEqual([]);
     expect(records.has(ROOM)).toBe(true);
   });
 
-  test('invariant 2: only a join token leaves, and only for a user who is in the room', async () => {
+  test('invariants 2 and 17: only a participant token leaves (a join token means join), and only for a user who is in the room', async () => {
     const { service, records, ejected } = setup({ [OTHER]: 'p-2' });
     records.set(ROOM, record());
 
@@ -130,6 +140,9 @@ describe('leaving a call natively (open-chat #9559 invariant 2)', () => {
       'Unexpected auth token type',
     );
     await expect(service.leaveMeeting(joinToken())).rejects.toThrow(
+      'Unexpected auth token type',
+    );
+    await expect(service.leaveMeeting(participantToken())).rejects.toThrow(
       'Not in the call',
     );
     expect(ejected).toEqual([]);
@@ -137,36 +150,36 @@ describe('leaving a call natively (open-chat #9559 invariant 2)', () => {
 
   test('invariant 2: no call in progress is a 404 and an eject the room refuses is reported', async () => {
     const empty = setup({ [PHONE]: 'p-1' });
-    await expect(empty.service.leaveMeeting(joinToken())).rejects.toThrow(
-      'No call in progress',
-    );
+    await expect(
+      empty.service.leaveMeeting(participantToken()),
+    ).rejects.toThrow('No call in progress');
 
     const refused = setup({ [PHONE]: 'p-1' }, false);
     refused.records.set(ROOM, record());
-    await expect(refused.service.leaveMeeting(joinToken())).rejects.toThrow(
-      'Unable to leave the call',
-    );
+    await expect(
+      refused.service.leaveMeeting(participantToken()),
+    ).rejects.toThrow('Unable to leave the call');
   });
 
   test('invariant 16: a leave ejects only the session that died, never another device of the same user', async () => {
     const two = setup({ [PHONE]: ['p-desktop', 'p-phone'], [OTHER]: 'p-2' });
     two.records.set(ROOM, record());
     // the phone names its own session
-    await two.service.leaveMeeting(joinToken(), 'p-phone');
+    await two.service.leaveMeeting(participantToken(), 'p-phone');
     expect(two.ejected).toEqual([{ room: ROOM, ids: ['p-phone'] }]);
     // a session that is not the user's is refused
-    await expect(two.service.leaveMeeting(joinToken(), 'p-2')).rejects.toThrow(
-      'Not in the call',
-    );
+    await expect(
+      two.service.leaveMeeting(participantToken(), 'p-2'),
+    ).rejects.toThrow('Not in the call');
     // without a session, two devices means nobody is ejected
-    await expect(two.service.leaveMeeting(joinToken())).rejects.toThrow(
+    await expect(two.service.leaveMeeting(participantToken())).rejects.toThrow(
       'more than one device',
     );
     expect(two.ejected).toHaveLength(1);
     // and a single device still leaves without naming its session
     const one = setup({ [PHONE]: 'p-phone' });
     one.records.set(ROOM, record());
-    await one.service.leaveMeeting(joinToken());
+    await one.service.leaveMeeting(participantToken());
     expect(one.ejected).toEqual([{ room: ROOM, ids: ['p-phone'] }]);
   });
 });
