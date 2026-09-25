@@ -44,6 +44,15 @@ export class AppController {
     return this.appService.endMeeting(auth);
   }
 
+  @Post('leave')
+  @HttpCode(204)
+  leaveMeeting(@Headers('x-auth-jwt') auth: string | undefined): Promise<void> {
+    if (auth === undefined) {
+      throw new UnauthorizedException('Missing auth token');
+    }
+    return this.appService.leaveMeeting(auth);
+  }
+
   @Post('decline')
   @HttpCode(204)
   declineMeeting(
