@@ -1,9 +1,11 @@
-import { DailyRoomInfo } from '@daily-co/daily-js';
 import {
   BadRequestException,
+  ConflictException,
   Injectable,
   InternalServerErrorException,
   Logger,
+  NotFoundException,
+  ServiceUnavailableException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -22,6 +24,7 @@ import {
   TokenPayload,
   VideoCallType,
   mapTokenPayload,
+  DailyRoomInfo,
 } from './types';
 import {
   callTypeForToken,
@@ -189,6 +192,30 @@ export class AppService {
       });
   }
 
+  // Daily's presence for the room; the meeting token carries the OpenChat user id. When
+  // presence cannot be read the caller must not act as if the room were empty.
+  private async roomHasUser(
+    roomName: string,
+    userId: string,
+  ): Promise<boolean> {
+    const resp = await fetch(
+      `https://api.daily.co/v1/rooms/${roomName}/presence`,
+      { method: 'GET', headers: this.getAuthHeaders() },
+    ).catch((err) => {
+      Logger.error('Error getting room presence: ', roomName, err);
+      return undefined;
+    });
+    if (resp === undefined || !resp.ok) {
+      throw new ServiceUnavailableException(
+        'Unable to read who is in the call',
+      );
+    }
+    const data = await resp.json();
+    return (data.data ?? []).some(
+      (p: { userId?: string }) => p.userId === userId,
+    );
+  }
+
   private async getRoomParticipantsCount(chatId: string): Promise<number> {
     try {
       const resp = await fetch(
@@ -265,24 +292,27 @@ export class AppService {
   private decodeJwt(token: string): TokenPayload {
     const rawKey = this.configService.get('OC_PUBLIC');
     const publicKey = rawKey.replace(/\\n/g, '\n');
-    let decoded: TokenPayload | undefined = undefined;
     try {
-      decoded = mapTokenPayload(
+      return mapTokenPayload(
         jwt.verify(token, publicKey, {
           algorithms: ['ES256'],
         }) as ApiTokenPayload,
-      ) as TokenPayload;
+      );
     } catch (err) {
       Logger.error('Error verifying access token: ', err);
       throw new UnauthorizedException(
         `Unable to verify supplied access token: ${err}`,
       );
     }
-    return decoded;
   }
 
   async endMeeting(authToken: string): Promise<void> {
     const decoded = this.decodeJwt(authToken);
+    if (decoded.claimType !== 'MarkVideoCallAsEnded') {
+      throw new BadRequestException(
+        `Unexpected auth token type of ${decoded.claimType}`,
+      );
+    }
     const roomName = this.chatIdToRoomName(decoded.userId, decoded.chatId);
     const inprog = await this.inprogressService.get(roomName);
     if (inprog) {
@@ -290,6 +320,56 @@ export class AppService {
         this.roomNameToMeeting(roomName, inprog.messageId),
       ]);
     }
+  }
+
+  // A decline, from a running client with the token it would join with, or from a phone
+  // whose app is not running with the decline token from its ring push. A direct call
+  // ends for both sides through the ordinary finish path; a group call carries on and the
+  // decliner's local user index stops the ring on their other devices. Nothing records
+  // that anyone declined.
+  async declineMeeting(authToken: string): Promise<void> {
+    const decoded = this.decodeJwt(authToken);
+    if (
+      decoded.claimType !== 'JoinVideoCall' &&
+      decoded.claimType !== 'DeclineVideoCall'
+    ) {
+      throw new BadRequestException(
+        `Unexpected auth token type of ${decoded.claimType}`,
+      );
+    }
+    const roomName = this.chatIdToRoomName(decoded.userId, decoded.chatId);
+    const inprog = await this.inprogressService.get(roomName);
+    if (inprog === undefined) {
+      throw new NotFoundException('No call in progress');
+    }
+    if (
+      decoded.claimType === 'DeclineVideoCall' &&
+      decoded.messageId !== BigInt(inprog.messageId)
+    ) {
+      throw new BadRequestException('The token names another call');
+    }
+    // A ring can outlive the user's own answer on another device, and a join token says
+    // nothing about that. A user who is in the room declines nothing (#9534 invariant 13).
+    if (await this.roomHasUser(roomName, decoded.userId)) {
+      throw new ConflictException('The user is in the call');
+    }
+    if (decoded.chatId.kind === 'direct_chat') {
+      this.processFinishedMeetings([
+        this.roomNameToMeeting(roomName, inprog.messageId),
+      ]);
+      return;
+    }
+    if (decoded.localUserIndex === undefined) {
+      throw new BadRequestException(
+        'The token does not name a local user index',
+      );
+    }
+    await this.openChat.callDeclined(
+      decoded.localUserIndex,
+      decoded.userId,
+      decoded.chatId,
+      BigInt(inprog.messageId),
+    );
   }
 
   private callTypeFromRoom(room: DailyRoomInfo): VideoCallType {
@@ -306,7 +386,10 @@ export class AppService {
   ): Promise<AccessTokenResponse> {
     try {
       const decoded = this.decodeJwt(authToken);
-      if (decoded.claimType === 'MarkVideoCallAsEnded') {
+      if (
+        decoded.claimType !== 'StartVideoCall' &&
+        decoded.claimType !== 'JoinVideoCall'
+      ) {
         throw new BadRequestException(
           `Unexpected auth token type of ${decoded.claimType}`,
         );

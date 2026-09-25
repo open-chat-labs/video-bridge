@@ -7,7 +7,6 @@ import {
   Meeting,
   VideoCallType,
 } from './types';
-import { toBigIntBE, toBufferBE } from 'bigint-buffer';
 import { randomBytes } from 'crypto';
 
 export function newMessageId(): bigint {
@@ -73,25 +72,24 @@ export function base64ToCanisterId(sanitised: string): string {
 }
 
 function unsanitise(base64: string): string {
-  return base64.replace(/\_/g, '+').replace(/\-/g, '/');
+  return base64.replace(/_/g, '+').replace(/-/g, '/');
 }
 
 function sanitise(base64: string): string {
   return base64.replace(/\+/g, '_').replace(/\//g, '-').replace(/=*$/, '');
 }
 
+// A channel id travels in a room name as 16 big-endian bytes, base64 encoded
 export function channelIdToBase64(channelId: string): string {
-  const bigintVal = toBigInt32(channelId);
-  const buffer = toBufferBE(bigintVal, 16);
-  const base64 = buffer.toString('base64');
+  const hex = toBigInt32(channelId).toString(16).padStart(32, '0');
+  const base64 = Buffer.from(hex, 'hex').toString('base64');
   return sanitise(base64);
 }
 
 export function base64ToChannelId(sanitised: string): string {
   const base64 = unsanitise(sanitised);
-  const buffer = Buffer.from(base64, 'base64');
-  const bigintVal = toBigIntBE(buffer);
-  return bigintVal.toString();
+  const hex = Buffer.from(base64, 'base64').toString('hex');
+  return BigInt('0x' + (hex || '0')).toString();
 }
 
 export function canisterIdToBase64(canisterId: string): string {

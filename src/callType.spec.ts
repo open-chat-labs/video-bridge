@@ -13,7 +13,6 @@ describe('audio calls (open-chat #9455)', () => {
       ['starter', false, STARTER],
       ['joiner', true, JOINER],
     ])('%s', (_, joining, userId) => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const params: any = meetingTokenParams(
         joining,
         'Audio',

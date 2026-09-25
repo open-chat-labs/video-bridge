@@ -3,16 +3,12 @@ import { CandidService } from '../candidService';
 import { CommunityService, idlFactory } from './candid/idl';
 import { Principal } from '@dfinity/principal';
 import { Identity } from '@dfinity/agent';
-import {
-  ChannelMeeting,
-  VideoCallType,
-  videoCallTypeToApi,
-} from '../../types';
+import { ChannelMeeting, VideoCallType, videoCallTypeToApi } from '../../types';
 import {
   DEFAULT_MAX_CALL_DURATION_MS,
   DIAMOND_MAX_CALL_DURATION_MS,
 } from '../constants';
-import { toBigInt32 } from 'src/utils';
+import { toBigInt32 } from '../../utils';
 
 export class CommunityClient extends CandidService {
   private communityService: CommunityService;

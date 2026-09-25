@@ -1,5 +1,16 @@
 import { IsNotEmpty, IsObject } from 'class-validator';
 
+// The part of a Daily room, as returned by the REST API, that the bridge reads
+export type DailyRoomInfo = {
+  id: string;
+  name: string;
+  url: string;
+  config: {
+    enable_hidden_participants?: boolean;
+    [key: string]: unknown;
+  };
+};
+
 export type ApiStartClaims = {
   claim_type: 'StartVideoCall';
   call_type: ApiVideoCallType;
@@ -14,6 +25,19 @@ export type ApiJoinClaims = {
   claim_type: 'JoinVideoCall';
   user_id: string;
   chat_id: ApiChatIdentifier;
+  // the local user index that signed the token; absent from one that predates declines
+  local_user_index?: string;
+};
+
+// Carried in a ring push so a phone whose app is not running can decline without an
+// identity. Signed by the local user index, per call and per recipient, expiring with the
+// ring window.
+export type ApiDeclineClaims = {
+  claim_type: 'DeclineVideoCall';
+  user_id: string;
+  chat_id: ApiChatIdentifier;
+  message_id: string;
+  local_user_index: string;
 };
 
 export type ApiMarkCallEndedClaims = {
@@ -22,7 +46,8 @@ export type ApiMarkCallEndedClaims = {
   chat_id: ApiChatIdentifier;
 };
 
-export type ApiClaims = ApiStartClaims | ApiJoinClaims | ApiMarkCallEndedClaims;
+export type ApiClaims =
+  ApiStartClaims | ApiJoinClaims | ApiMarkCallEndedClaims | ApiDeclineClaims;
 
 export type ApiTokenPayload = ApiClaims & {
   exp: number;
@@ -54,7 +79,8 @@ export function videoCallTypeToApi(callType: VideoCallType): {
   };
 }
 
-export type TokenPayload = StartClaims | JoinClaims | EndCallClaims;
+export type TokenPayload =
+  StartClaims | JoinClaims | EndCallClaims | DeclineClaims;
 
 export type EndCallClaims = {
   claimType: 'MarkVideoCallAsEnded';
@@ -74,12 +100,19 @@ export type JoinClaims = {
   claimType: 'JoinVideoCall';
   userId: string;
   chatId: ChatIdentifier;
+  localUserIndex?: string;
+};
+
+export type DeclineClaims = {
+  claimType: 'DeclineVideoCall';
+  userId: string;
+  chatId: ChatIdentifier;
+  messageId: bigint;
+  localUserIndex: string;
 };
 
 export type ApiChatIdentifier =
-  | ApiGroupChatIdentifier
-  | ApiDirectChatIdentifier
-  | ApiChannelIdentifier;
+  ApiGroupChatIdentifier | ApiDirectChatIdentifier | ApiChannelIdentifier;
 
 export type ApiGroupChatIdentifier = {
   Group: string;
@@ -114,6 +147,15 @@ export function mapTokenPayload(token: ApiTokenPayload): TokenPayload {
         claimType: token.claim_type,
         userId: token.user_id,
         chatId: mapChatId(token.chat_id),
+        localUserIndex: token.local_user_index,
+      };
+    case 'DeclineVideoCall':
+      return {
+        claimType: token.claim_type,
+        userId: token.user_id,
+        chatId: mapChatId(token.chat_id),
+        messageId: BigInt(token.message_id),
+        localUserIndex: token.local_user_index,
       };
   }
 }

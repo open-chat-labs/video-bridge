@@ -43,12 +43,14 @@ services:
       - video_bridge_network
 
   database:
-    image: mongo:latest
+    image: mongo:8
     container_name: video_bridge_db
     environment:
       - MONGODB_DATABASE="video_bridge"
+    # the api containers reach mongo over the compose network; the host mapping is for local
+    # tooling only, so it is never exposed beyond the machine
     ports:
-      - 27017:27017
+      - 127.0.0.1:27017:27017
     networks:
       - video_bridge_network
     volumes:
