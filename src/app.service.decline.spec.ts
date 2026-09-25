@@ -52,9 +52,18 @@ function declineToken(
   );
 }
 
-function joinToken(chat_id: unknown, user_id = CALLEE, withLui = true) {
+function joinToken(chat_id: unknown, user_id = CALLEE) {
   return sign({
     claim_type: 'JoinVideoCall',
+    user_id,
+    chat_id,
+    local_user_index: LUI,
+  });
+}
+
+function participantToken(chat_id: unknown, user_id = CALLEE, withLui = true) {
+  return sign({
+    claim_type: 'VideoCallParticipant',
     user_id,
     chat_id,
     ...(withLui ? { local_user_index: LUI } : {}),
@@ -141,12 +150,16 @@ const GROUP_ROOM = chatIdToRoomName(CALLEE, {
 });
 
 describe('declining a call (open-chat #9534)', () => {
-  test('invariant 2: a decline token verifies only as a decline; a start or end token is refused', async () => {
+  test('invariant 2: a decline token verifies only as a decline; a start, join or end token is refused', async () => {
     const { service, records, finished, declined } = setup();
     records.set(DIRECT_ROOM, record(DIRECT_ROOM, CALLER));
 
     await expect(
       service.declineMeeting(endToken(directChat(CALLER))),
+    ).rejects.toThrow('Unexpected auth token type');
+    // open-chat #9559 invariant 17: a join token means join and nothing else
+    await expect(
+      service.declineMeeting(joinToken(directChat(CALLER))),
     ).rejects.toThrow('Unexpected auth token type');
     await expect(
       service.declineMeeting(
@@ -170,6 +183,16 @@ describe('declining a call (open-chat #9534)', () => {
     await expect(
       service.endMeeting(joinToken(directChat(CALLER))),
     ).rejects.toThrow('Unexpected auth token type');
+    await expect(
+      service.endMeeting(participantToken(directChat(CALLER))),
+    ).rejects.toThrow('Unexpected auth token type');
+    // and a participant token never joins (#9559 invariant 17)
+    await expect(
+      service.getAccessToken(participantToken(directChat(CALLER)), 'callee'),
+    ).rejects.toThrow('Error obtaining room access token');
+    // the join path wraps every failure in that message, so the proof that the token
+    // type was refused is that neither attempt reached Daily
+    expect(global.fetch).not.toHaveBeenCalled();
 
     expect(finished).toEqual([]);
     expect(declined).toEqual([]);
@@ -234,11 +257,13 @@ describe('declining a call (open-chat #9534)', () => {
     expect(declined).toEqual([]);
   });
 
-  test('invariant 6: a running client declines a direct call with its join token', async () => {
+  test('invariant 6: a running client declines a direct call with a participant token', async () => {
     const { service, records, finished } = setup();
     records.set(DIRECT_ROOM, record(DIRECT_ROOM, CALLER));
 
-    await service.declineMeeting(joinToken(directChat(CALLER), CALLEE, false));
+    await service.declineMeeting(
+      participantToken(directChat(CALLER), CALLEE, false),
+    );
 
     expect(finished).toHaveLength(1);
   });
@@ -261,14 +286,26 @@ describe('declining a call (open-chat #9534)', () => {
     ]);
   });
 
-  test('invariant 7: a group decline with a join token that names no local user index is refused', async () => {
+  test('invariant 7: a group decline with a participant token that names no local user index is refused', async () => {
     const { service, records, declined } = setup();
     records.set(GROUP_ROOM, record(GROUP_ROOM, CALLER));
 
     await expect(
-      service.declineMeeting(joinToken(groupChat(), CALLEE, false)),
+      service.declineMeeting(participantToken(groupChat(), CALLEE, false)),
     ).rejects.toThrow('local user index');
     expect(declined).toEqual([]);
+  });
+
+  test('invariant 7: a group decline with a participant token tells the local user index', async () => {
+    const { service, records, finished, declined } = setup();
+    records.set(GROUP_ROOM, record(GROUP_ROOM, CALLER));
+
+    await service.declineMeeting(participantToken(groupChat()));
+
+    expect(finished).toEqual([]);
+    expect(declined).toEqual([
+      expect.objectContaining({ lui: LUI, userId: CALLEE }),
+    ]);
   });
 
   test('invariant 13: a decline from a user who is in the call ends nothing', async () => {
@@ -276,9 +313,11 @@ describe('declining a call (open-chat #9534)', () => {
     records.set(DIRECT_ROOM, record(DIRECT_ROOM, CALLER));
     records.set(GROUP_ROOM, record(GROUP_ROOM, CALLER));
 
-    // the stale web ring after answering on the phone, with a join token
+    // the stale web ring after answering on the phone, with a participant token
     await expect(
-      service.declineMeeting(joinToken(directChat(CALLER), CALLEE, false)),
+      service.declineMeeting(
+        participantToken(directChat(CALLER), CALLEE, false),
+      ),
     ).rejects.toThrow('in the call');
     // and the phone's decline racing the answer elsewhere, with a decline token
     await expect(

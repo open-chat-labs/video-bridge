@@ -44,6 +44,20 @@ export class AppController {
     return this.appService.endMeeting(auth);
   }
 
+  @Post('leave')
+  @HttpCode(204)
+  leaveMeeting(
+    @Headers('x-auth-jwt') auth: string | undefined,
+    @Body() body: { sessionId?: string } | undefined,
+  ): Promise<void> {
+    if (auth === undefined) {
+      throw new UnauthorizedException('Missing auth token');
+    }
+    const sessionId =
+      typeof body?.sessionId === 'string' ? body.sessionId : undefined;
+    return this.appService.leaveMeeting(auth, sessionId);
+  }
+
   @Post('decline')
   @HttpCode(204)
   declineMeeting(
