@@ -40,7 +40,7 @@ const endToken = () =>
     chat_id: { Group: GROUP },
   });
 
-function setup(present: Record<string, string>, ejectOk = true) {
+function setup(present: Record<string, string | string[]>, ejectOk = true) {
   const records = new Map<string, CreateInProgressDto>();
   const inprogress = {
     get: async (roomName: string) => records.get(roomName),
@@ -70,7 +70,9 @@ function setup(present: Record<string, string>, ejectOk = true) {
         ok: true,
         json: async () => ({
           total_count: Object.keys(present).length,
-          data: Object.entries(present).map(([userId, id]) => ({ userId, id })),
+          data: Object.entries(present).flatMap(([userId, ids]) =>
+            (Array.isArray(ids) ? ids : [ids]).map((id) => ({ userId, id })),
+          ),
         }),
       } as Response;
     }
@@ -144,5 +146,27 @@ describe('leaving a call natively (open-chat #9559 invariant 2)', () => {
     await expect(refused.service.leaveMeeting(joinToken())).rejects.toThrow(
       'Unable to leave the call',
     );
+  });
+
+  test('invariant 16: a leave ejects only the session that died, never another device of the same user', async () => {
+    const two = setup({ [PHONE]: ['p-desktop', 'p-phone'], [OTHER]: 'p-2' });
+    two.records.set(ROOM, record());
+    // the phone names its own session
+    await two.service.leaveMeeting(joinToken(), 'p-phone');
+    expect(two.ejected).toEqual([{ room: ROOM, ids: ['p-phone'] }]);
+    // a session that is not the user's is refused
+    await expect(two.service.leaveMeeting(joinToken(), 'p-2')).rejects.toThrow(
+      'Not in the call',
+    );
+    // without a session, two devices means nobody is ejected
+    await expect(two.service.leaveMeeting(joinToken())).rejects.toThrow(
+      'more than one device',
+    );
+    expect(two.ejected).toHaveLength(1);
+    // and a single device still leaves without naming its session
+    const one = setup({ [PHONE]: 'p-phone' });
+    one.records.set(ROOM, record());
+    await one.service.leaveMeeting(joinToken());
+    expect(one.ejected).toEqual([{ room: ROOM, ids: ['p-phone'] }]);
   });
 });
