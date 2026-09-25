@@ -190,6 +190,9 @@ describe('declining a call (open-chat #9534)', () => {
     await expect(
       service.getAccessToken(participantToken(directChat(CALLER)), 'callee'),
     ).rejects.toThrow('Error obtaining room access token');
+    // the join path wraps every failure in that message, so the proof that the token
+    // type was refused is that neither attempt reached Daily
+    expect(global.fetch).not.toHaveBeenCalled();
 
     expect(finished).toEqual([]);
     expect(declined).toEqual([]);
