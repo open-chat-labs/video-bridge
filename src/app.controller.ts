@@ -97,28 +97,17 @@ export class AppController {
     );
   }
 
-  /**
-   * Verify the event signature so we are sure it came from Daily. The comparison is constant
-   * time, and a signature older than the replay window is refused however valid it is.
-   */
   private isValid(
     timestamp: string,
     signatureHeader: string,
     body: MeetingEndedEvent,
   ): boolean {
     try {
-      if (!isFresh(timestamp)) {
-        return false;
-      }
-      const secret = this.configService.get<string>('DAILY_HOOK_HMAC');
-      const signature = timestamp + '.' + JSON.stringify(body);
-      const base64DecodedSecret = Buffer.from(secret, 'base64');
-      const hmac = crypto.createHmac('sha256', base64DecodedSecret);
-      const computed = hmac.update(signature).digest();
-      const supplied = Buffer.from(signatureHeader ?? '', 'base64');
-      return (
-        computed.length === supplied.length &&
-        crypto.timingSafeEqual(computed, supplied)
+      return isSignedByDaily(
+        this.configService.get<string>('DAILY_HOOK_HMAC'),
+        timestamp,
+        signatureHeader,
+        body,
       );
     } catch (err) {
       Logger.error(
@@ -150,22 +139,32 @@ export class AppController {
         });
       }
     } else {
-      Logger.error('Hook received from daily js cannot be verified');
+      Logger.error(
+        `Hook received from daily js cannot be verified (timestamp ${timestamp})`,
+      );
     }
   }
 }
 
-// Daily sends the webhook timestamp as seconds since the epoch
-const HOOK_REPLAY_WINDOW_SECONDS = 5 * 60;
-
-export function isFresh(
+/**
+ * Whether Daily signed this event: HMAC-SHA256 over `timestamp.body` with the base64 decoded
+ * secret, compared in constant time. The timestamp's age is deliberately not checked. A five
+ * minute window refused every live delivery, and Daily retries a failed delivery with its
+ * original timestamp. A replayed meeting.ended does nothing once the meeting is no longer
+ * recorded as in progress.
+ */
+export function isSignedByDaily(
+  secret: string,
   timestamp: string,
-  nowSeconds: number = Math.floor(Date.now() / 1000),
+  signatureHeader: string | undefined,
+  body: unknown,
 ): boolean {
-  const sent = Number(timestamp);
+  const hmac = crypto.createHmac('sha256', Buffer.from(secret, 'base64'));
+  const computed = hmac.update(timestamp + '.' + JSON.stringify(body)).digest();
+  const supplied = Buffer.from(signatureHeader ?? '', 'base64');
   return (
-    Number.isInteger(sent) &&
-    Math.abs(nowSeconds - sent) <= HOOK_REPLAY_WINDOW_SECONDS
+    computed.length === supplied.length &&
+    crypto.timingSafeEqual(computed, supplied)
   );
 }
 
