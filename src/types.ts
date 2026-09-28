@@ -46,8 +46,23 @@ export type ApiMarkCallEndedClaims = {
   chat_id: ApiChatIdentifier;
 };
 
+// Proof that the user belongs to the chat, and nothing more. Signed by the local user index
+// for a running client that declines, or for the phone shell to leave with when the app is
+// killed mid-call. It cannot join: whatever a join token comes to carry, this one stays a
+// membership proof (open-chat #9559 invariant 17).
+export type ApiParticipantClaims = {
+  claim_type: 'VideoCallParticipant';
+  user_id: string;
+  chat_id: ApiChatIdentifier;
+  local_user_index?: string;
+};
+
 export type ApiClaims =
-  ApiStartClaims | ApiJoinClaims | ApiMarkCallEndedClaims | ApiDeclineClaims;
+  | ApiStartClaims
+  | ApiJoinClaims
+  | ApiMarkCallEndedClaims
+  | ApiDeclineClaims
+  | ApiParticipantClaims;
 
 export type ApiTokenPayload = ApiClaims & {
   exp: number;
@@ -80,7 +95,7 @@ export function videoCallTypeToApi(callType: VideoCallType): {
 }
 
 export type TokenPayload =
-  StartClaims | JoinClaims | EndCallClaims | DeclineClaims;
+  StartClaims | JoinClaims | EndCallClaims | DeclineClaims | ParticipantClaims;
 
 export type EndCallClaims = {
   claimType: 'MarkVideoCallAsEnded';
@@ -109,6 +124,13 @@ export type DeclineClaims = {
   chatId: ChatIdentifier;
   messageId: bigint;
   localUserIndex: string;
+};
+
+export type ParticipantClaims = {
+  claimType: 'VideoCallParticipant';
+  userId: string;
+  chatId: ChatIdentifier;
+  localUserIndex?: string;
 };
 
 export type ApiChatIdentifier =
@@ -143,6 +165,7 @@ export function mapTokenPayload(token: ApiTokenPayload): TokenPayload {
         isDiamond: token.is_diamond,
       };
     case 'JoinVideoCall':
+    case 'VideoCallParticipant':
       return {
         claimType: token.claim_type,
         userId: token.user_id,

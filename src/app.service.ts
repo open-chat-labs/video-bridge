@@ -198,6 +198,14 @@ export class AppService {
     roomName: string,
     userId: string,
   ): Promise<boolean> {
+    return (await this.participantsInRoom(roomName, userId)).length > 0;
+  }
+
+  // Every Daily presence entry of a user in the room: one per device.
+  private async participantsInRoom(
+    roomName: string,
+    userId: string,
+  ): Promise<{ userId?: string; id?: string }[]> {
     const resp = await fetch(
       `https://api.daily.co/v1/rooms/${roomName}/presence`,
       { method: 'GET', headers: this.getAuthHeaders() },
@@ -211,8 +219,8 @@ export class AppService {
       );
     }
     const data = await resp.json();
-    return (data.data ?? []).some(
-      (p: { userId?: string }) => p.userId === userId,
+    return (data.data ?? []).filter(
+      (p: { userId?: string; id?: string }) => p.userId === userId,
     );
   }
 
@@ -322,15 +330,16 @@ export class AppService {
     }
   }
 
-  // A decline, from a running client with the token it would join with, or from a phone
-  // whose app is not running with the decline token from its ring push. A direct call
+  // A decline, from a running client with a participant token (proof that it belongs to
+  // the chat), or from a phone whose app is not running with the decline token from its
+  // ring push. A join token is not taken: it means join and nothing else. A direct call
   // ends for both sides through the ordinary finish path; a group call carries on and the
   // decliner's local user index stops the ring on their other devices. Nothing records
   // that anyone declined.
   async declineMeeting(authToken: string): Promise<void> {
     const decoded = this.decodeJwt(authToken);
     if (
-      decoded.claimType !== 'JoinVideoCall' &&
+      decoded.claimType !== 'VideoCallParticipant' &&
       decoded.claimType !== 'DeclineVideoCall'
     ) {
       throw new BadRequestException(
@@ -348,8 +357,8 @@ export class AppService {
     ) {
       throw new BadRequestException('The token names another call');
     }
-    // A ring can outlive the user's own answer on another device, and a join token says
-    // nothing about that. A user who is in the room declines nothing (#9534 invariant 13).
+    // A ring can outlive the user's own answer on another device, and a participant token
+    // says nothing about that. A user who is in the room declines nothing (#9534 invariant 13).
     if (await this.roomHasUser(roomName, decoded.userId)) {
       throw new ConflictException('The user is in the call');
     }
@@ -370,6 +379,64 @@ export class AppService {
       decoded.chatId,
       BigInt(inprog.messageId),
     );
+  }
+
+  // A participant's device died mid-call (the app was killed) and nothing on it can leave
+  // the Daily room, so the others would see it frozen until Daily's own timeout. The
+  // shell asks with the participant token it was handed (a join token is refused: it
+  // means join and nothing else); the participant is ejected from the room. The call
+  // itself carries on: this is a leave, never an end (open-chat #9559).
+  //
+  // `sessionId` names the device's own Daily session: a user can be in the room from two
+  // devices, and only the dead one is ejected (open-chat #9559 invariant 16). Without it
+  // the eject happens only when the user has a single session.
+  async leaveMeeting(authToken: string, sessionId?: string): Promise<void> {
+    const decoded = this.decodeJwt(authToken);
+    if (decoded.claimType !== 'VideoCallParticipant') {
+      throw new BadRequestException(
+        `Unexpected auth token type of ${decoded.claimType}`,
+      );
+    }
+    const roomName = this.chatIdToRoomName(decoded.userId, decoded.chatId);
+    const inprog = await this.inprogressService.get(roomName);
+    if (inprog === undefined) {
+      throw new NotFoundException('No call in progress');
+    }
+    const sessions = await this.participantsInRoom(roomName, decoded.userId);
+    const ids = sessions.map((p) => p.id).filter((id) => id !== undefined);
+    let participantId: string | undefined;
+    if (sessionId !== undefined) {
+      participantId = ids.find((id) => id === sessionId);
+    } else if (ids.length === 1) {
+      participantId = ids[0];
+    } else if (ids.length > 1) {
+      throw new ConflictException(
+        'The user is in the call from more than one device',
+      );
+    }
+    if (participantId === undefined) {
+      throw new NotFoundException('Not in the call');
+    }
+    const resp = await fetch(
+      `https://api.daily.co/v1/rooms/${roomName}/eject`,
+      {
+        method: 'POST',
+        headers: this.getJsonHeaders(),
+        body: JSON.stringify({ ids: [participantId] }),
+      },
+    ).catch((err) => {
+      Logger.error('Error ejecting participant: ', roomName, err);
+      return undefined;
+    });
+    if (resp === undefined || !resp.ok) {
+      throw new ServiceUnavailableException('Unable to leave the call');
+    }
+  }
+
+  private getJsonHeaders(): Headers {
+    const headers = this.getAuthHeaders();
+    headers.append('Content-Type', 'application/json');
+    return headers;
   }
 
   private callTypeFromRoom(room: DailyRoomInfo): VideoCallType {
