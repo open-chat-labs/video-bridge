@@ -8,6 +8,7 @@ import {
   DIAMOND_MAX_CALL_DURATION_MS,
 } from '../constants';
 import { UserService, idlFactory } from './candid/idl';
+import { userCanisterId } from './userId';
 
 export class UserClient extends CandidService {
   private userService: UserService;
@@ -18,9 +19,10 @@ export class UserClient extends CandidService {
     host: string,
   ) {
     super(identity);
+    // The user may be one of many in a MultiUser canister, so their id isn't always their canister's
     this.userService = this.createServiceClient<UserService>(
       idlFactory,
-      userId,
+      userCanisterId(userId),
       host,
     );
   }
@@ -36,8 +38,7 @@ export class UserClient extends CandidService {
   ): Promise<bigint> {
     return this.handleResponse(
       this.userService.start_video_call_v2({
-        // open-chat #9401 added the target user to every User canister endpoint that is not
-        // owner only. A user canister from before that change ignores the extra field.
+        // The user whose copy of the chat the call starts in, which a MultiUser canister needs
         user_id: Principal.fromText(this.userId),
         message_id: msgId,
         initiator: Principal.fromText(initiatorId),
@@ -79,12 +80,10 @@ export class UserClient extends CandidService {
     Logger.debug(msg);
     return this.handleResponse(
       this.userService.end_video_call_v2({
-        // open-chat #9401 renamed the other user from `user_id` to `them` and made `user_id`
-        // the target user. User canisters upgrade over days, so this has to work on both
-        // sides of that change: a canister from before it reads the other user from
-        // `user_id`, and one from after it reads `them` and does not read `user_id` at all.
-        // Once every user canister is past #9401 `user_id` should become this.userId.
-        user_id: Principal.fromText(otherUser),
+        // The user whose copy of the chat the call ends in, which a MultiUser canister needs.
+        // A User canister from before open-chat #9401 read the other user from `user_id`, so
+        // this needs every User canister to be past it.
+        user_id: Principal.fromText(this.userId),
         them: Principal.fromText(otherUser),
         message_id: meeting.messageId,
       }),
