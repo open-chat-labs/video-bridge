@@ -49,21 +49,27 @@ afterEach(() => jest.restoreAllMocks());
 
 describe('UserClient', () => {
   it.each([
-    ['in a MultiUser canister', MULTI_USER_USER, MULTI_USER_CANISTER],
+    [
+      'in a MultiUser canister',
+      MULTI_USER_USER,
+      MULTI_USER_CANISTER,
+      USER_CANISTER_USER,
+    ],
     [
       'with a User canister of their own',
       USER_CANISTER_USER,
       USER_CANISTER_USER,
+      MULTI_USER_USER,
     ],
   ])(
-    'starts a call in the canister of the callee %s, naming them',
-    async (_, callee, canister) => {
+    'starts a call in the canister of the callee %s, naming them and the initiator',
+    async (_, callee, canister, initiator) => {
       const calls = fakeCanisters();
 
       await client(callee).sendVideoCallStartedMessage(
         'Default',
         1n,
-        USER_CANISTER_USER,
+        initiator,
         false,
         'initiator',
       );
@@ -72,6 +78,7 @@ describe('UserClient', () => {
       expect(calls[0].canisterId).toBe(canister);
       expect(calls[0].method).toBe('start_video_call_v2');
       expect(text(calls[0].args.user_id)).toBe(callee);
+      expect(text(calls[0].args.initiator)).toBe(initiator);
     },
   );
 
