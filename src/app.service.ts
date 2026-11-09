@@ -349,7 +349,7 @@ export class AppService {
     const roomName = this.chatIdToRoomName(decoded.userId, decoded.chatId);
     const inprog = await this.inprogressService.get(roomName);
     const running =
-      inprog !== undefined && decoded.messageId === BigInt(inprog.messageId);
+      inprog != null && decoded.messageId === BigInt(inprog.messageId);
     return { decoded, roomName, inprog: running ? inprog : undefined };
   }
 
