@@ -223,6 +223,14 @@ export type ChannelMeeting = MeetingCommon & {
   chatId: ChannelIdentifier;
 };
 
+// Where a ring stands for the phone that holds its token
+export type RingStatus = { status: 'ringing' | 'answered' | 'ended' };
+
+export type RingAnswer = {
+  token: string;
+  roomName: string;
+};
+
 export type AccessTokenResponse = {
   token: string;
   roomName: string;

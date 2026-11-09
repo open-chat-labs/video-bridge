@@ -129,6 +129,20 @@ export class OpenChatService {
     );
   }
 
+  // A user answered a ring: their local user index stops it on their other phones.
+  callAnswered(
+    localUserIndex: string,
+    userId: string,
+    chatId: ChatIdentifier,
+    messageId: bigint,
+  ): Promise<void> {
+    return this.getLocalUserIndexClient(localUserIndex).callAnswered(
+      userId,
+      chatId,
+      messageId,
+    );
+  }
+
   private getLocalUserIndexClient(canisterId: string): LocalUserIndexClient {
     return new LocalUserIndexClient(
       this._identity as unknown as Identity,

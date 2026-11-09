@@ -14,6 +14,7 @@ export interface VideoCallDeclinedArgs {
   message_id: bigint;
 }
 export interface _SERVICE {
+  video_call_answered: ActorMethod<[VideoCallDeclinedArgs], UnitResult>;
   video_call_declined: ActorMethod<[VideoCallDeclinedArgs], UnitResult>;
 }
 export declare const idlFactory: IDL.InterfaceFactory;
