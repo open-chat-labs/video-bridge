@@ -57,17 +57,7 @@ function setup(running = true, present: string[] = []) {
   const config = {
     get: (key: string) => (key === 'OC_PUBLIC' ? PUBLIC_PEM : 'x'),
   };
-  const answered: unknown[] = [];
-  const openChat = {
-    callAnswered: async (
-      lui: string,
-      userId: string,
-      chatId: unknown,
-      messageId: bigint,
-    ) => {
-      answered.push({ lui, userId, chatId, messageId });
-    },
-  };
+  const openChat = {};
   const tokenRequests: string[] = [];
   global.fetch = jest.fn(async (url: string, init?: RequestInit) => {
     if (url.endsWith('/presence')) {
@@ -88,7 +78,7 @@ function setup(running = true, present: string[] = []) {
     config as any,
     openChat as any,
   );
-  return { service, answered, tokenRequests };
+  return { service, tokenRequests };
 }
 
 describe('a ring', () => {
@@ -162,18 +152,5 @@ describe('a ring', () => {
       other.service.answerRing(ringToken(60, '999'), 'bob'),
     ).rejects.toThrow();
     expect(other.tokenRequests).toHaveLength(0);
-  });
-
-  it('answering tells the local user index, so the other phones stop', async () => {
-    const { service, answered } = setup();
-    await service.answerRing(ringToken(), 'bob');
-    expect(answered).toEqual([
-      {
-        lui: LUI,
-        userId: CALLEE,
-        chatId: { kind: 'direct_chat', userId: CALLER },
-        messageId: BigInt(MESSAGE_ID),
-      },
-    ]);
   });
 });

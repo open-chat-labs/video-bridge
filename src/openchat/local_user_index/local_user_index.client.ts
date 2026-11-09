@@ -20,30 +20,6 @@ export class LocalUserIndexClient extends CandidService {
     );
   }
 
-  callAnswered(
-    userId: string,
-    chatId: ChatIdentifier,
-    messageId: bigint,
-  ): Promise<void> {
-    Logger.debug(
-      `Telling the local user index that ${userId} answered the call`,
-    );
-    return this.handleResponse(
-      this.service.video_call_answered({
-        user_id: Principal.fromText(userId),
-        chat_id: toChat(chatId),
-        message_id: messageId,
-      }),
-      (response) => {
-        if ('Error' in response) {
-          throw new Error(
-            `video_call_answered failed: ${response.Error[0]} ${response.Error[1][0] ?? ''}`,
-          );
-        }
-      },
-    );
-  }
-
   callDeclined(
     userId: string,
     chatId: ChatIdentifier,

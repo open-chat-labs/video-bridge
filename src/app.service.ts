@@ -375,17 +375,6 @@ export class AppService {
       username,
       inprog.startedBy,
     );
-    if (decoded.localUserIndex !== undefined) {
-      // Only stops the user's other phones ringing, so it never costs them the call
-      this.openChat
-        .callAnswered(
-          decoded.localUserIndex,
-          decoded.userId,
-          decoded.chatId,
-          BigInt(inprog.messageId),
-        )
-        .catch((err) => Logger.error('Error reporting an answer: ', err));
-    }
     return { token, roomName };
   }
 
