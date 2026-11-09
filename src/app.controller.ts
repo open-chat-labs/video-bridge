@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Get,
@@ -10,7 +11,12 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { AppService } from './app.service';
-import { AccessTokenResponse, MeetingEndedEvent } from './types';
+import {
+  AccessTokenResponse,
+  MeetingEndedEvent,
+  RingAnswer,
+  RingStatus,
+} from './types';
 import { ConfigService } from '@nestjs/config';
 import * as crypto from 'crypto';
 import { validate } from 'class-validator';
@@ -69,6 +75,34 @@ export class AppController {
       );
     }
     return this.appService.declineMeeting(auth);
+  }
+
+  // How the iOS shell learns a ring is over, as iOS doesn't allow a push to cancel one
+  @Post('ring_status')
+  @HttpCode(200)
+  ringStatus(
+    @Headers('x-auth-jwt') auth: string | undefined,
+  ): Promise<RingStatus> {
+    if (auth === undefined) {
+      throw new UnauthorizedException('Missing decline token');
+    }
+    return this.appService.ringStatus(auth);
+  }
+
+  // Joins a rung call from the iOS shell, which may have no web layer running
+  @Post('answer')
+  @HttpCode(200)
+  answerRing(
+    @Headers('x-auth-jwt') auth: string | undefined,
+    @Body() body: { username?: string } | undefined,
+  ): Promise<RingAnswer> {
+    if (auth === undefined) {
+      throw new UnauthorizedException('Missing decline token');
+    }
+    if (typeof body?.username !== 'string' || body.username === '') {
+      throw new BadRequestException('A username is required');
+    }
+    return this.appService.answerRing(auth, body.username);
   }
 
   @Get('meeting_access_token')

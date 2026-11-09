@@ -25,6 +25,8 @@ import {
   VideoCallType,
   mapTokenPayload,
   DailyRoomInfo,
+  RingAnswer,
+  RingStatus,
 } from './types';
 import {
   callTypeForToken,
@@ -336,6 +338,57 @@ export class AppService {
   // ends for both sides through the ordinary finish path; a group call carries on and the
   // decliner's local user index stops the ring on their other devices. Nothing records
   // that anyone declined.
+  // The ring's token and the call it names, if that call is still the room's
+  private async rungCall(authToken: string) {
+    const decoded = this.decodeJwt(authToken);
+    if (decoded.claimType !== 'DeclineVideoCall') {
+      throw new BadRequestException(
+        `Unexpected auth token type of ${decoded.claimType}`,
+      );
+    }
+    const roomName = this.chatIdToRoomName(decoded.userId, decoded.chatId);
+    const inprog = await this.inprogressService.get(roomName);
+    const running =
+      inprog !== undefined && decoded.messageId === BigInt(inprog.messageId);
+    return { decoded, roomName, inprog: running ? inprog : undefined };
+  }
+
+  async ringStatus(authToken: string): Promise<RingStatus> {
+    const { decoded, roomName, inprog } = await this.rungCall(authToken);
+    if (inprog === undefined) {
+      return { status: 'ended' };
+    }
+    const answered = await this.roomHasUser(roomName, decoded.userId);
+    return { status: answered ? 'answered' : 'ringing' };
+  }
+
+  async answerRing(authToken: string, username: string): Promise<RingAnswer> {
+    const { decoded, roomName, inprog } = await this.rungCall(authToken);
+    if (inprog === undefined) {
+      throw new NotFoundException('No call in progress');
+    }
+    const token = await this.getMeetingToken(
+      true,
+      inprog.callType ?? 'Default',
+      roomName,
+      decoded.userId,
+      username,
+      inprog.startedBy,
+    );
+    if (decoded.localUserIndex !== undefined) {
+      // Only stops the user's other phones ringing, so it never costs them the call
+      this.openChat
+        .callAnswered(
+          decoded.localUserIndex,
+          decoded.userId,
+          decoded.chatId,
+          BigInt(inprog.messageId),
+        )
+        .catch((err) => Logger.error('Error reporting an answer: ', err));
+    }
+    return { token, roomName };
+  }
+
   async declineMeeting(authToken: string): Promise<void> {
     const decoded = this.decodeJwt(authToken);
     if (
