@@ -52,7 +52,7 @@ function setup(running = true, present: string[] = []) {
             startedBy: CALLER,
             callType: 'Default',
           }
-        : undefined,
+        : null, // what mongoose gives for no record
   };
   const config = {
     get: (key: string) => (key === 'OC_PUBLIC' ? PUBLIC_PEM : 'x'),
