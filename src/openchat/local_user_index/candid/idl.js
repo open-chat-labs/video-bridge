@@ -20,7 +20,6 @@ export const idlFactory = ({ IDL }) => {
     Success: IDL.Null,
   });
   return IDL.Service({
-    video_call_answered: IDL.Func([VideoCallDeclinedArgs], [UnitResult], []),
     video_call_declined: IDL.Func([VideoCallDeclinedArgs], [UnitResult], []),
   });
 };
