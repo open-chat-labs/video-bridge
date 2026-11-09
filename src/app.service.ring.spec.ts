@@ -136,6 +136,14 @@ describe('a ring', () => {
     expect(properties.user_id).toBe(CALLEE);
   });
 
+  it('invariant 24: a ring answer is never a Daily owner or admin', async () => {
+    const { service, tokenRequests } = setup();
+    await service.answerRing(ringToken(), 'bob');
+    const properties = JSON.parse(tokenRequests[0]).properties;
+    expect(properties.is_owner).toBeFalsy();
+    expect(properties.permissions?.canAdmin).toBeFalsy();
+  });
+
   it('invariant 21: an expired token or a call that has gone gets no Daily token', async () => {
     const expired = setup();
     await expect(
