@@ -20,6 +20,13 @@ export class InProgressService {
     return upserted.acknowledged;
   }
 
+  // Never creates a record, as the call may have finished since the caller read it
+  async confirm(roomName: string): Promise<void> {
+    await this.inProgressModel
+      .updateOne({ roomName }, { confirmed: true })
+      .exec();
+  }
+
   getAll(): Promise<InProgress[]> {
     return this.inProgressModel.find().exec();
   }

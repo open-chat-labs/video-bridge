@@ -619,14 +619,8 @@ export class AppService {
 
       inProgressList.forEach(({ roomName, confirmed }) => {
         if (occupiedRoomsNames.has(roomName) && !confirmed) {
-          const inprog = inProgress.get(roomName);
-          if (inprog) {
-            this.inprogressService.upsert({
-              messageId: inprog.messageId,
-              roomName: inprog.roomName,
-              startedBy: inprog.startedBy,
-              confirmed: true,
-            });
+          if (inProgress.has(roomName)) {
+            this.inprogressService.confirm(roomName);
           } else {
             Logger.warn(
               "A room name has come back from the presence api that we don't have a record of: ",
